@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HUD do Soldador - Final Build v9</title>
+    <title>HUD do Soldador - Audio Balance Edition</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -93,7 +93,7 @@
         </div>
 
         <div class="modal" id="modal-config">
-            <h3>⚙️ Customização</h3>
+            <h3>⚙️ Configuração</h3>
             <label>Tensão (s)</label><input type="number" id="cfg-time">
             <label>Descanso (s)</label><input type="number" id="cfg-rest">
             <label>Séries</label><input type="number" id="cfg-sets">
@@ -115,7 +115,7 @@
         </div>
 
         <div class="modal" id="modal-stats">
-            <h3>📅 Diário</h3>
+            <h3>📅 Diário de Combate</h3>
             <div id="calendar-log"></div>
             <button class="btn-main" style="width:100%; margin-top:20px" onclick="closeModals()">FECHAR</button>
         </div>
@@ -129,9 +129,9 @@
         };
         let playerStats = { history: {} };
         let workoutData = [
-            { title: "A Prancha (Defesa)", desc: "Corpo reto. Segure a posição.", img: "1.png" },
-            { title: "Cadeirinha (Wall Sit)", desc: "90 graus na parede.", img: "2.png" },
-            { title: "Voo do Superman", desc: "Eleve braços e pernas.", img: "3.png" },
+            { title: "A Prancha (Defesa)", desc: "Cotovelos no chão, corpo reto.", img: "1.png" },
+            { title: "Cadeirinha (Wall Sit)", desc: "Costas na parede, 90 graus.", img: "2.png" },
+            { title: "Voo do Superman", desc: "Eleve braços e pernas deitado.", img: "3.png" },
             { title: "Estátua da Tocha", desc: "Segure o peso e trave.", img: "4.png" }
         ];
 
@@ -151,11 +151,13 @@
             if (isResting) {
                 audioW.volume = 0; audioW.pause();
                 audioR.src = defaultSettings.musicRest;
-                audioR.volume = 1; audioR.play().catch(()=>{});
+                audioR.volume = 1.0; // Shostakovich no máximo
+                audioR.play().catch(()=>{});
             } else {
                 audioR.volume = 0; audioR.pause();
                 audioW.src = defaultSettings.musicWork;
-                audioW.volume = 1; audioW.play().catch(()=>{});
+                audioW.volume = 0.4; // DnB reduzido para equilibrar
+                audioW.play().catch(()=>{});
             }
         }
 
@@ -195,7 +197,6 @@
         }
 
         function toggleTimer() {
-            // "WARM UP" DOS DOIS ÁUDIOS NO PRIMEIRO CLIQUE
             if (!audioUnlocked) {
                 audioW.src = defaultSettings.musicWork; audioR.src = defaultSettings.musicRest;
                 audioW.play().then(() => audioW.pause()); audioR.play().then(() => audioR.pause());
@@ -232,12 +233,11 @@
             let d = new Date().toLocaleDateString('pt-BR');
             playerStats.history[d] = (playerStats.history[d] || 0) + sessionXP;
             localStorage.setItem('soldador_stats', JSON.stringify(playerStats));
-            alert("TREINO CONCLUÍDO!"); sessionXP = 0; loadExercise(0);
+            alert("MISSÃO CUMPRIDA!"); sessionXP = 0; loadExercise(0);
         }
 
         function skip() { exIndex++; if (exIndex >= workoutData.length) finish(); else loadExercise(exIndex); }
 
-        // --- SISTEMA DE UPLOAD ---
         let tempImgs = {}, tempAudios = {};
         function handleAudioUpload(input, type) {
             const reader = new FileReader();
