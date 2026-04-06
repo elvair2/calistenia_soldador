@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HUD do Soldador - Dynamic Sync Edition</title>
+    <title>HUD do Soldador - Edit v11.2</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -33,7 +33,7 @@
         .mini-menu { display: flex; gap: 8px; }
         .mini-btn { background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 0.9em; }
 
-        .status-badge { display: inline-block; padding: 4px 10px; background: #333; border-radius: 4px; font-size: 0.8em; font-weight: bold; margin-bottom: 15px; border: 1px solid #555; }
+        .status-badge { display: inline-block; padding: 4px 10px; background: #333; border-radius: 4px; font-size: 0.8em; font-weight: bold; margin-bottom: 15px; border: 1px solid #555; min-width: 140px; }
 
         h2 { margin: 0 0 5px 0; font-size: 1.4em; }
         .desc { font-size: 0.85em; color: var(--muted-text); margin-bottom: 15px; min-height: 35px; }
@@ -57,6 +57,8 @@
         .modal { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(18, 18, 18, 0.95); z-index: 10; flex-direction: column; padding: 25px; box-sizing: border-box; text-align: left; overflow-y: auto; }
         .modal input { width: 100%; background: #2a2a2a; border: 1px solid #555; color: #fff; padding: 10px; margin-top: 5px; border-radius: 4px; box-sizing: border-box; }
         .config-ex-item { background: #222; padding: 10px; border-radius: 6px; border: 1px solid #333; margin-bottom: 10px; }
+
+        .app-version { margin-top: 20px; font-size: 0.7em; color: #444; text-transform: uppercase; letter-spacing: 1px; }
     </style>
 </head>
 <body>
@@ -69,14 +71,14 @@
             <div class="header">Estamina Ocupacional</div>
             <div class="mini-menu">
                 <button class="mini-btn" onclick="openStats()">📅 Log</button>
-                <button class="mini-btn" onclick="openConfig()">⚙️ Level</button>
+                <button class="mini-btn" onclick="openConfig()">⚙️ Edit</button>
             </div>
         </div>
         
-        <div class="status-badge" id="status-badge">PRONTO PARA O COMBATE</div>
+        <div class="status-badge" id="status-badge">STANDBY</div>
         <div class="image-container"><img id="ex-img" src="" alt="Referência"></div>
 
-        <h2 id="ex-title">Carregando...</h2>
+        <h2 id="ex-title">Iniciando...</h2>
         <div class="desc" id="ex-desc">...</div>
 
         <div style="display: flex; justify-content: space-between; font-size: 0.9em; margin-bottom: 10px;">
@@ -89,34 +91,35 @@
 
         <div class="controls">
             <button class="btn-main" id="btn-action" onclick="toggleTimer()">INICIAR</button>
-            <button class="btn-main" onclick="skip()">PULAR >></button>
+            <button class="btn-main" onclick="skip()">PULAR</button>
         </div>
 
+        <div class="app-version">Soldier HUD v11.2 - Anti-Sleep & Sync Build</div>
+
         <div class="modal" id="modal-config">
-            <h3>⚙️ Configuração de Missão</h3>
-            <label>Tempo de Tensão (s)</label><input type="number" id="cfg-time">
-            <label>Tempo de Descanso (s)</label><input type="number" id="cfg-rest">
+            <h3>⚙️ Editar Inventário</h3>
+            <label>Tensão (s)</label><input type="number" id="cfg-time">
+            <label>Descanso (s)</label><input type="number" id="cfg-rest">
             <label>Séries</label><input type="number" id="cfg-sets">
 
-            <h4>🎵 Gerenciador de Áudio</h4>
-            <div style="font-size:0.7em; color:#888; margin-bottom:5px;">Prioridade: Arquivos 'ataque.mp3' e 'descanso.mp3' no GitHub.</div>
-            <input type="text" id="cfg-music-work" readonly placeholder="Combate">
+            <h4>🎵 Áudios</h4>
+            <input type="text" id="cfg-music-work" readonly placeholder="ataque.mp3">
             <input type="file" accept="audio/*" onchange="handleAudioUpload(this, 'work')">
-            <input type="text" id="cfg-music-rest" readonly placeholder="Descanso">
+            <input type="text" id="cfg-music-rest" readonly placeholder="descanso.mp3">
             <input type="file" accept="audio/*" onchange="handleAudioUpload(this, 'rest')">
 
-            <h4>🖼️ Inventário de Skins (.png)</h4>
+            <h4>🖼️ Fotos (.png)</h4>
             <div id="config-exercises-list"></div>
-            <button class="btn-main" style="width:100%; margin-top:10px" onclick="addCustomExercise()">+ ADICIONAR EXERCÍCIO</button>
+            <button class="btn-main" style="width:100%; margin-top:10px" onclick="addCustomExercise()">+ ADICIONAR ITEM</button>
 
             <div style="display:flex; gap:10px; margin-top:20px">
-                <button class="btn-main" id="btn-action" onclick="saveConfig()">SALVAR TUDO</button>
+                <button class="btn-main" id="btn-action" onclick="saveConfig()">SALVAR</button>
                 <button class="btn-main" onclick="closeModals()">FECHAR</button>
             </div>
         </div>
 
         <div class="modal" id="modal-stats">
-            <h3>📅 Relatório de Estamina</h3>
+            <h3>📅 Histórico de Missão</h3>
             <div id="calendar-log"></div>
             <button class="btn-main" style="width:100%; margin-top:20px" onclick="closeModals()">FECHAR</button>
         </div>
@@ -131,9 +134,9 @@
         let playerStats = { history: {} };
         let workoutData = [
             { title: "A Prancha (Defesa)", desc: "Mantenha o core firme e respire.", img: "1.png" },
-            { title: "Cadeirinha (Wall Sit)", desc: "90 graus na parede. Não suba.", img: "2.png" },
-            { title: "Voo do Superman", desc: "Eleve o tronco e pernas. Segure.", img: "3.png" },
-            { title: "Estátua da Tocha", desc: "Trave o braço com o peso. Foco.", img: "4.png" }
+            { title: "Cadeirinha (Wall Sit)", desc: "90 graus na parede. Foco.", img: "2.png" },
+            { title: "Voo do Superman", desc: "Eleve o tronco e pernas.", img: "3.png" },
+            { title: "Estátua da Tocha", desc: "Segure o peso e trave.", img: "4.png" }
         ];
 
         try {
@@ -143,67 +146,51 @@
         } catch(e){}
 
         let exIndex = 0, currentSet = 1, isResting = false, timeLeft = 0, totalTimeForPhase = 0, timerInterval = null, isRunning = false, sessionXP = 0;
-        let audioUnlocked = false;
-        let fadeInterval = null;
-        const audioW = document.getElementById('audio-work');
-        const audioR = document.getElementById('audio-rest');
+        let audioUnlocked = false, wakeLock = null;
+        const audioW = document.getElementById('audio-work'), audioR = document.getElementById('audio-rest');
 
-        // MOTOR DE SINCRONIZAÇÃO DINÂMICA
-        function applyAudioSync() {
+        // FUNÇÃO DE TELA SEMPRE ATIVA
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator) {
+                try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
+            }
+        }
+
+        function releaseWakeLock() {
+            if (wakeLock !== null) { wakeLock.release(); wakeLock = null; }
+        }
+
+        // MOTOR DE ÁUDIO SINCRONIZADO
+        function applySyncAudio() {
             if (!isRunning) {
-                // Fade out total ao pausar o jogo
-                fadeToSilence(audioW);
-                fadeToSilence(audioR);
+                audioW.volume = 0; audioR.volume = 0;
+                audioW.pause(); audioR.pause();
                 return;
             }
 
-            const activeAudio = isResting ? audioR : audioW;
-            const idleAudio = isResting ? audioW : audioR;
-            const targetVol = isResting ? 1.0 : 0.4; // Descanso alto, Ataque reduzido
+            const active = isResting ? audioR : audioW;
+            const idle = isResting ? audioW : audioR;
+            const targetVol = isResting ? 1.0 : 0.4;
 
-            // Inicia o áudio da fase atual exatamente de onde parou
-            activeAudio.play().catch(()=>{});
+            active.play().catch(()=>{});
             
-            // Faz o crossfade de volume
-            smoothTransition(activeAudio, idleAudio, targetVol);
-        }
-
-        function smoothTransition(audioIn, audioOut, targetIn) {
-            clearInterval(fadeInterval);
-            let step = 0.05;
-            fadeInterval = setInterval(() => {
-                let finished = true;
-
-                if (audioIn.volume < targetIn) {
-                    audioIn.volume = Math.min(targetIn, audioIn.volume + step);
-                    finished = false;
+            // Crossfade rápido e limpo (1 segundo)
+            let volFade = 0;
+            let interval = setInterval(() => {
+                volFade += 0.1;
+                active.volume = Math.min(targetVol, volFade * targetVol);
+                idle.volume = Math.max(0, idle.volume - 0.1);
+                
+                if(volFade >= 1) {
+                    clearInterval(interval);
+                    idle.pause();
                 }
-                if (audioOut.volume > 0) {
-                    audioOut.volume = Math.max(0, audioOut.volume - step);
-                    finished = false;
-                } else {
-                    audioOut.pause(); // Congela a música idle
-                }
-
-                if (finished) clearInterval(fadeInterval);
             }, 100);
-        }
-
-        function fadeToSilence(audio) {
-            let fadeOut = setInterval(() => {
-                if (audio.volume > 0.05) {
-                    audio.volume -= 0.05;
-                } else {
-                    audio.volume = 0;
-                    audio.pause();
-                    clearInterval(fadeOut);
-                }
-            }, 50);
         }
 
         function loadExercise(index) {
             clearInterval(timerInterval); isRunning = false; exIndex = index; currentSet = 1; isResting = false;
-            applyAudioSync();
+            applySyncAudio();
             if(index >= workoutData.length) index = 0;
             const ex = workoutData[index];
             document.getElementById('ex-img').src = ex.img;
@@ -212,7 +199,7 @@
             document.getElementById('ex-display').innerText = `${index + 1} / ${workoutData.length}`;
             setupPhase();
             document.getElementById('btn-action').innerText = "INICIAR";
-            document.getElementById('status-badge').innerText = "AGUARDANDO";
+            document.getElementById('status-badge').innerText = "PRONTO";
             document.getElementById('hud').className = "hud-container";
         }
 
@@ -220,11 +207,11 @@
             document.getElementById('set-display').innerText = `${currentSet} / ${defaultSettings.sets}`;
             if (isResting) {
                 timeLeft = defaultSettings.rest; totalTimeForPhase = defaultSettings.rest;
-                document.getElementById('status-badge').innerText = "RECUPERANDO ENERGIA";
+                document.getElementById('status-badge').innerText = "REGENERANDO";
                 document.getElementById('hud').className = "hud-container mode-rest";
             } else {
                 timeLeft = defaultSettings.time; totalTimeForPhase = defaultSettings.time;
-                document.getElementById('status-badge').innerText = isRunning ? "ATIVO: MANTENHA A POSIÇÃO" : "PRONTO?";
+                document.getElementById('status-badge').innerText = isRunning ? "COMBATE ATIVO" : "EM ESPERA";
                 document.getElementById('hud').className = "hud-container";
             }
             updateTimerDisplay();
@@ -246,11 +233,13 @@
             if (isRunning) {
                 clearInterval(timerInterval); isRunning = false;
                 document.getElementById('btn-action').innerText = "RETOMAR";
-                applyAudioSync();
+                applySyncAudio();
+                releaseWakeLock();
             } else {
                 isRunning = true;
+                requestWakeLock();
                 document.getElementById('btn-action').innerText = "PAUSAR";
-                applyAudioSync();
+                applySyncAudio();
                 timerInterval = setInterval(() => {
                     timeLeft--;
                     if(!isResting) sessionXP++;
@@ -265,26 +254,23 @@
             if (!isResting) {
                 if (currentSet >= defaultSettings.sets) {
                     exIndex++; 
-                    if (exIndex >= workoutData.length) finish(); 
-                    else loadExercise(exIndex);
-                } else { 
-                    isResting = true; setupPhase(); toggleTimer(); 
-                }
-            } else { 
-                isResting = false; currentSet++; setupPhase(); toggleTimer(); 
-            }
+                    if (exIndex >= workoutData.length) finish(); else loadExercise(exIndex);
+                } else { isResting = true; setupPhase(); toggleTimer(); }
+            } else { isResting = false; currentSet++; setupPhase(); toggleTimer(); }
+            applySyncAudio(); // Garante a troca de música no final exato
         }
 
         function finish() {
             let d = new Date().toLocaleDateString('pt-BR');
             playerStats.history[d] = (playerStats.history[d] || 0) + sessionXP;
             localStorage.setItem('soldador_stats', JSON.stringify(playerStats));
-            alert("MISSAO CUMPRIDA, SOLDADOR!"); sessionXP = 0; loadExercise(0);
+            alert("MISSAO CUMPRIDA!"); sessionXP = 0; loadExercise(0);
+            releaseWakeLock();
         }
 
         function skip() { exIndex++; if (exIndex >= workoutData.length) finish(); else loadExercise(exIndex); }
 
-        // --- GESTAO DE ARQUIVOS (SAVES) ---
+        // --- SISTEMA DE ARQUIVOS ---
         let tempImgs = {}, tempAudios = {};
         function handleAudioUpload(input, type) {
             const reader = new FileReader();
@@ -317,7 +303,7 @@
             const list = document.getElementById('config-exercises-list'); list.innerHTML = '';
             workoutData.forEach((ex, i) => {
                 list.innerHTML += `<div class="config-ex-item">
-                    <b>Exercício ${i+1}: ${ex.title}</b><br>
+                    <b>${ex.title}</b><br>
                     <input type="text" id="cfg-l-${i}" value="${ex.img.length > 100 ? '[MEMÓRIA]' : ex.img}" readonly>
                     <input type="file" accept="image/*" onchange="handleImg(this, ${i})">
                 </div>`;
@@ -338,13 +324,13 @@
         }
 
         function addCustomExercise() {
-            const t = prompt("Nome do Skill:"); if(t) { workoutData.push({title: t, desc: "Posição customizada", img: "1.png"}); openConfig(); }
+            const t = prompt("Nome:"); if(t) { workoutData.push({title: t, desc: "Personalizado", img: "1.png"}); openConfig(); }
         }
 
         function openStats() {
             const log = document.getElementById('calendar-log'); log.innerHTML = '';
             Object.entries(playerStats.history).sort().reverse().forEach(([d, s]) => {
-                log.innerHTML += `<div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #333"><span>${d}</span><b>${Math.floor(s/60)} Min de Foco</b></div>`;
+                log.innerHTML += `<div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #333"><span>${d}</span><b>${Math.floor(s/60)} min</b></div>`;
             });
             document.getElementById('modal-stats').style.display = 'flex';
         }
