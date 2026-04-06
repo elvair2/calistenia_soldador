@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HUD do Soldador - Audio Balance Edition</title>
+    <title>HUD do Soldador - Cinematic Edition</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -98,13 +98,13 @@
             <label>Descanso (s)</label><input type="number" id="cfg-rest">
             <label>Séries</label><input type="number" id="cfg-sets">
 
-            <h4>🎵 Áudios (ataque.mp3 / descanso.mp3)</h4>
+            <h4>🎵 Áudios (GitHub ou Memória)</h4>
             <input type="text" id="cfg-music-work" readonly placeholder="Combate">
             <input type="file" accept="audio/*" onchange="handleAudioUpload(this, 'work')">
             <input type="text" id="cfg-music-rest" readonly placeholder="Descanso">
             <input type="file" accept="audio/*" onchange="handleAudioUpload(this, 'rest')">
 
-            <h4>🖼️ Fotos (1.png, 2.png...)</h4>
+            <h4>🖼️ Fotos (Inventário)</h4>
             <div id="config-exercises-list"></div>
             <button class="btn-main" style="width:100%; margin-top:10px" onclick="addCustomExercise()">+ ADICIONAR EXERCÍCIO</button>
 
@@ -115,7 +115,7 @@
         </div>
 
         <div class="modal" id="modal-stats">
-            <h3>📅 Diário de Combate</h3>
+            <h3>📅 Log de Treino</h3>
             <div id="calendar-log"></div>
             <button class="btn-main" style="width:100%; margin-top:20px" onclick="closeModals()">FECHAR</button>
         </div>
@@ -129,7 +129,7 @@
         };
         let playerStats = { history: {} };
         let workoutData = [
-            { title: "A Prancha (Defesa)", desc: "Cotovelos no chão, corpo reto.", img: "1.png" },
+            { title: "A Prancha (Defesa)", desc: "Corpo reto. Segure a posição.", img: "1.png" },
             { title: "Cadeirinha (Wall Sit)", desc: "Costas na parede, 90 graus.", img: "2.png" },
             { title: "Voo do Superman", desc: "Eleve braços e pernas deitado.", img: "3.png" },
             { title: "Estátua da Tocha", desc: "Segure o peso e trave.", img: "4.png" }
@@ -143,27 +143,45 @@
 
         let exIndex = 0, currentSet = 1, isResting = false, timeLeft = 0, totalTimeForPhase = 0, timerInterval = null, isRunning = false, sessionXP = 0;
         let audioUnlocked = false;
-        const audioW = document.getElementById('audio-work'), audioR = document.getElementById('audio-rest');
+        let fadeInterval = null;
+        const audioW = document.getElementById('audio-work');
+        const audioR = document.getElementById('audio-rest');
 
-        function updateAudio() {
-            if (!isRunning) { audioW.pause(); audioR.pause(); return; }
-            
-            if (isResting) {
-                audioW.volume = 0; audioW.pause();
-                audioR.src = defaultSettings.musicRest;
-                audioR.volume = 1.0; // Shostakovich no máximo
-                audioR.play().catch(()=>{});
-            } else {
-                audioR.volume = 0; audioR.pause();
-                audioW.src = defaultSettings.musicWork;
-                audioW.volume = 0.4; // DnB reduzido para equilibrar
-                audioW.play().catch(()=>{});
-            }
+        // MOTOR DE CROSSFADE PERSISTENTE
+        function crossfade() {
+            clearInterval(fadeInterval);
+            const audioIn = isResting ? audioR : audioW;
+            const audioOut = isResting ? audioW : audioR;
+            const targetVolIn = isResting ? 1.0 : 0.4; // Descanso alto, Ataque baixo
+
+            // Garante que o áudio de entrada comece/continue
+            audioIn.play().catch(()=>{});
+
+            let step = 0.05;
+            fadeInterval = setInterval(() => {
+                // Aumenta áudio In
+                if (audioIn.volume < targetVolIn) {
+                    audioIn.volume = Math.min(targetVolIn, audioIn.volume + step);
+                }
+                // Abaixa áudio Out
+                if (audioOut.volume > 0) {
+                    audioOut.volume = Math.max(0, audioOut.volume - step);
+                } else {
+                    audioOut.pause(); // Pausa o que saiu pra salvar processamento
+                }
+
+                // Finaliza o fade
+                if (audioIn.volume >= targetVolIn && audioOut.volume <= 0) {
+                    clearInterval(fadeInterval);
+                }
+            }, 100);
         }
 
         function loadExercise(index) {
             clearInterval(timerInterval); isRunning = false; exIndex = index; currentSet = 1; isResting = false;
-            updateAudio();
+            audioW.pause(); audioR.pause(); 
+            audioW.volume = 0; audioR.volume = 0;
+
             if(index >= workoutData.length) index = 0;
             const ex = workoutData[index];
             document.getElementById('ex-img').src = ex.img;
@@ -198,19 +216,20 @@
 
         function toggleTimer() {
             if (!audioUnlocked) {
-                audioW.src = defaultSettings.musicWork; audioR.src = defaultSettings.musicRest;
-                audioW.play().then(() => audioW.pause()); audioR.play().then(() => audioR.pause());
+                audioW.src = defaultSettings.musicWork; 
+                audioR.src = defaultSettings.musicRest;
+                audioW.volume = 0; audioR.volume = 0;
                 audioUnlocked = true;
             }
 
             if (isRunning) {
                 clearInterval(timerInterval); isRunning = false;
                 document.getElementById('btn-action').innerText = "RETOMAR";
-                updateAudio();
+                audioW.pause(); audioR.pause();
             } else {
                 isRunning = true;
                 document.getElementById('btn-action').innerText = "PAUSAR";
-                updateAudio();
+                crossfade();
                 timerInterval = setInterval(() => {
                     timeLeft--;
                     if(!isResting) sessionXP++;
@@ -233,11 +252,12 @@
             let d = new Date().toLocaleDateString('pt-BR');
             playerStats.history[d] = (playerStats.history[d] || 0) + sessionXP;
             localStorage.setItem('soldador_stats', JSON.stringify(playerStats));
-            alert("MISSÃO CUMPRIDA!"); sessionXP = 0; loadExercise(0);
+            alert("TREINO CONCLUÍDO!"); sessionXP = 0; loadExercise(0);
         }
 
         function skip() { exIndex++; if (exIndex >= workoutData.length) finish(); else loadExercise(exIndex); }
 
+        // --- SISTEMA DE UPLOAD ---
         let tempImgs = {}, tempAudios = {};
         function handleAudioUpload(input, type) {
             const reader = new FileReader();
