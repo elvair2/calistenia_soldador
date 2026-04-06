@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HUD do Soldador - Edit v11.3</title>
+    <title>HUD do Soldador - Edit v11.4</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -65,7 +65,9 @@
 
     <audio id="audio-work" loop></audio>
     <audio id="audio-rest" loop></audio>
-    <audio id="audio-beep" src="beep.mp3"></audio> <div class="hud-container" id="hud">
+    <audio id="audio-beep" src="beep.mp3"></audio>
+
+    <div class="hud-container" id="hud">
         <div class="top-bar">
             <div class="header">Estamina Ocupacional</div>
             <div class="mini-menu">
@@ -93,7 +95,7 @@
             <button class="btn-main" onclick="skip()">PULAR</button>
         </div>
 
-        <div class="app-version">Soldier HUD v11.3 - Beep & Sync Build</div>
+        <div class="app-version">Soldier HUD v11.4 - Sync Build</div>
 
         <div class="modal" id="modal-config">
             <h3>⚙️ Editar Inventário</h3>
@@ -187,7 +189,7 @@
         function loadExercise(index) {
             clearInterval(timerInterval); isRunning = false; exIndex = index; currentSet = 1; isResting = false;
             applySyncAudio();
-            audioB.pause(); audioB.currentTime = 0; // Reseta o beep ao mudar de exercício 
+            audioB.pause(); audioB.currentTime = 0; 
             if(index >= workoutData.length) index = 0;
             const ex = workoutData[index];
             document.getElementById('ex-img').src = ex.img;
@@ -231,7 +233,7 @@
                 clearInterval(timerInterval); isRunning = false;
                 document.getElementById('btn-action').innerText = "RETOMAR";
                 applySyncAudio();
-                audioB.pause(); // Pausa o beep se o timer for pausado 
+                audioB.pause(); 
                 releaseWakeLock();
             } else {
                 isRunning = true;
@@ -239,14 +241,13 @@
                 document.getElementById('btn-action').innerText = "PAUSAR";
                 applySyncAudio();
                 
-                // Se o timer foi retomado nos últimos 5 segundos, retoma o beep 
-                if(timeLeft <= 5 && timeLeft > 0) audioB.play().catch(()=>{});
+                if(timeLeft <= 7 && timeLeft > 0) audioB.play().catch(()=>{});
 
                 timerInterval = setInterval(() => {
                     timeLeft--;
                     
-                    // GATILHO DO BEEP: 5 segundos antes de encerrar 
-                    if (timeLeft === 5) {
+                    // GATILHO DINÂMICO: 7 segundos antes de encerrar 
+                    if (timeLeft === 7) {
                         audioB.currentTime = 0;
                         audioB.play().catch(()=>{});
                     }
@@ -260,7 +261,7 @@
 
         function handleEnd() {
             clearInterval(timerInterval); isRunning = false;
-            audioB.pause(); audioB.currentTime = 0; // Garante que o beep para no 00:00 
+            audioB.pause(); audioB.currentTime = 0; 
             if (!isResting) {
                 if (currentSet >= defaultSettings.sets) {
                     exIndex++; 
@@ -283,7 +284,6 @@
             exIndex++; if (exIndex >= workoutData.length) finish(); else loadExercise(exIndex); 
         }
 
-        // --- SISTEMA DE ARQUIVOS ---
         let tempImgs = {}, tempAudios = {};
         function handleAudioUpload(input, type) {
             const reader = new FileReader();
@@ -325,6 +325,10 @@
         }
 
         function saveConfig() {
+            // Garante que o motor pare antes de salvar 
+            clearInterval(timerInterval);
+            isRunning = false;
+            
             defaultSettings.time = parseInt(document.getElementById('cfg-time').value);
             defaultSettings.rest = parseInt(document.getElementById('cfg-rest').value);
             defaultSettings.sets = parseInt(document.getElementById('cfg-sets').value);
@@ -333,6 +337,8 @@
             workoutData.forEach((ex, i) => { if(tempImgs[i]) ex.img = tempImgs[i]; });
             localStorage.setItem('soldador_cfg', JSON.stringify(defaultSettings));
             localStorage.setItem('soldador_workout', JSON.stringify(workoutData));
+            
+            // Recarrega o estado atualizado 
             location.reload();
         }
 
