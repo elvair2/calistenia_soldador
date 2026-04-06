@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HUD do Soldador - Edit v11.2</title>
+    <title>HUD do Soldador - Edit v11.3</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -65,8 +65,7 @@
 
     <audio id="audio-work" loop></audio>
     <audio id="audio-rest" loop></audio>
-
-    <div class="hud-container" id="hud">
+    <audio id="audio-beep" src="beep.mp3"></audio> <div class="hud-container" id="hud">
         <div class="top-bar">
             <div class="header">Estamina Ocupacional</div>
             <div class="mini-menu">
@@ -94,7 +93,7 @@
             <button class="btn-main" onclick="skip()">PULAR</button>
         </div>
 
-        <div class="app-version">Soldier HUD v11.2 - Anti-Sleep & Sync Build</div>
+        <div class="app-version">Soldier HUD v11.3 - Beep & Sync Build</div>
 
         <div class="modal" id="modal-config">
             <h3>⚙️ Editar Inventário</h3>
@@ -147,9 +146,8 @@
 
         let exIndex = 0, currentSet = 1, isResting = false, timeLeft = 0, totalTimeForPhase = 0, timerInterval = null, isRunning = false, sessionXP = 0;
         let audioUnlocked = false, wakeLock = null;
-        const audioW = document.getElementById('audio-work'), audioR = document.getElementById('audio-rest');
+        const audioW = document.getElementById('audio-work'), audioR = document.getElementById('audio-rest'), audioB = document.getElementById('audio-beep');
 
-        // FUNÇÃO DE TELA SEMPRE ATIVA
         async function requestWakeLock() {
             if ('wakeLock' in navigator) {
                 try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
@@ -160,10 +158,9 @@
             if (wakeLock !== null) { wakeLock.release(); wakeLock = null; }
         }
 
-        // MOTOR DE ÁUDIO SINCRONIZADO
         function applySyncAudio() {
             if (!isRunning) {
-                audioW.volume = 0; audioR.volume = 0;
+                audioW.volume = 0; audioR.volume = 0; audioB.pause();
                 audioW.pause(); audioR.pause();
                 return;
             }
@@ -174,7 +171,6 @@
 
             active.play().catch(()=>{});
             
-            // Crossfade rápido e limpo (1 segundo)
             let volFade = 0;
             let interval = setInterval(() => {
                 volFade += 0.1;
@@ -191,6 +187,7 @@
         function loadExercise(index) {
             clearInterval(timerInterval); isRunning = false; exIndex = index; currentSet = 1; isResting = false;
             applySyncAudio();
+            audioB.pause(); audioB.currentTime = 0; // Reseta o beep ao mudar de exercício 
             if(index >= workoutData.length) index = 0;
             const ex = workoutData[index];
             document.getElementById('ex-img').src = ex.img;
@@ -226,7 +223,7 @@
         function toggleTimer() {
             if (!audioUnlocked) {
                 audioW.src = defaultSettings.musicWork; audioR.src = defaultSettings.musicRest;
-                audioW.volume = 0; audioR.volume = 0;
+                audioW.volume = 0; audioR.volume = 0; audioB.volume = 1;
                 audioUnlocked = true;
             }
 
@@ -234,14 +231,26 @@
                 clearInterval(timerInterval); isRunning = false;
                 document.getElementById('btn-action').innerText = "RETOMAR";
                 applySyncAudio();
+                audioB.pause(); // Pausa o beep se o timer for pausado 
                 releaseWakeLock();
             } else {
                 isRunning = true;
                 requestWakeLock();
                 document.getElementById('btn-action').innerText = "PAUSAR";
                 applySyncAudio();
+                
+                // Se o timer foi retomado nos últimos 5 segundos, retoma o beep 
+                if(timeLeft <= 5 && timeLeft > 0) audioB.play().catch(()=>{});
+
                 timerInterval = setInterval(() => {
                     timeLeft--;
+                    
+                    // GATILHO DO BEEP: 5 segundos antes de encerrar 
+                    if (timeLeft === 5) {
+                        audioB.currentTime = 0;
+                        audioB.play().catch(()=>{});
+                    }
+
                     if(!isResting) sessionXP++;
                     updateTimerDisplay();
                     if(timeLeft <= 0) handleEnd();
@@ -251,13 +260,14 @@
 
         function handleEnd() {
             clearInterval(timerInterval); isRunning = false;
+            audioB.pause(); audioB.currentTime = 0; // Garante que o beep para no 00:00 
             if (!isResting) {
                 if (currentSet >= defaultSettings.sets) {
                     exIndex++; 
                     if (exIndex >= workoutData.length) finish(); else loadExercise(exIndex);
                 } else { isResting = true; setupPhase(); toggleTimer(); }
             } else { isResting = false; currentSet++; setupPhase(); toggleTimer(); }
-            applySyncAudio(); // Garante a troca de música no final exato
+            applySyncAudio(); 
         }
 
         function finish() {
@@ -268,7 +278,10 @@
             releaseWakeLock();
         }
 
-        function skip() { exIndex++; if (exIndex >= workoutData.length) finish(); else loadExercise(exIndex); }
+        function skip() { 
+            audioB.pause(); audioB.currentTime = 0; 
+            exIndex++; if (exIndex >= workoutData.length) finish(); else loadExercise(exIndex); 
+        }
 
         // --- SISTEMA DE ARQUIVOS ---
         let tempImgs = {}, tempAudios = {};
