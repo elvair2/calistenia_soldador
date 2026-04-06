@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HUD do Soldador - Cinematic Edition</title>
+    <title>HUD do Soldador - Dynamic Sync Edition</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -73,7 +73,7 @@
             </div>
         </div>
         
-        <div class="status-badge" id="status-badge">AGUARDANDO INÍCIO</div>
+        <div class="status-badge" id="status-badge">PRONTO PARA O COMBATE</div>
         <div class="image-container"><img id="ex-img" src="" alt="Referência"></div>
 
         <h2 id="ex-title">Carregando...</h2>
@@ -93,29 +93,30 @@
         </div>
 
         <div class="modal" id="modal-config">
-            <h3>⚙️ Configuração</h3>
-            <label>Tensão (s)</label><input type="number" id="cfg-time">
-            <label>Descanso (s)</label><input type="number" id="cfg-rest">
+            <h3>⚙️ Configuração de Missão</h3>
+            <label>Tempo de Tensão (s)</label><input type="number" id="cfg-time">
+            <label>Tempo de Descanso (s)</label><input type="number" id="cfg-rest">
             <label>Séries</label><input type="number" id="cfg-sets">
 
-            <h4>🎵 Áudios (GitHub ou Memória)</h4>
+            <h4>🎵 Gerenciador de Áudio</h4>
+            <div style="font-size:0.7em; color:#888; margin-bottom:5px;">Prioridade: Arquivos 'ataque.mp3' e 'descanso.mp3' no GitHub.</div>
             <input type="text" id="cfg-music-work" readonly placeholder="Combate">
             <input type="file" accept="audio/*" onchange="handleAudioUpload(this, 'work')">
             <input type="text" id="cfg-music-rest" readonly placeholder="Descanso">
             <input type="file" accept="audio/*" onchange="handleAudioUpload(this, 'rest')">
 
-            <h4>🖼️ Fotos (Inventário)</h4>
+            <h4>🖼️ Inventário de Skins (.png)</h4>
             <div id="config-exercises-list"></div>
             <button class="btn-main" style="width:100%; margin-top:10px" onclick="addCustomExercise()">+ ADICIONAR EXERCÍCIO</button>
 
             <div style="display:flex; gap:10px; margin-top:20px">
-                <button class="btn-main" id="btn-action" onclick="saveConfig()">SALVAR</button>
+                <button class="btn-main" id="btn-action" onclick="saveConfig()">SALVAR TUDO</button>
                 <button class="btn-main" onclick="closeModals()">FECHAR</button>
             </div>
         </div>
 
         <div class="modal" id="modal-stats">
-            <h3>📅 Log de Treino</h3>
+            <h3>📅 Relatório de Estamina</h3>
             <div id="calendar-log"></div>
             <button class="btn-main" style="width:100%; margin-top:20px" onclick="closeModals()">FECHAR</button>
         </div>
@@ -129,10 +130,10 @@
         };
         let playerStats = { history: {} };
         let workoutData = [
-            { title: "A Prancha (Defesa)", desc: "Corpo reto. Segure a posição.", img: "1.png" },
-            { title: "Cadeirinha (Wall Sit)", desc: "Costas na parede, 90 graus.", img: "2.png" },
-            { title: "Voo do Superman", desc: "Eleve braços e pernas deitado.", img: "3.png" },
-            { title: "Estátua da Tocha", desc: "Segure o peso e trave.", img: "4.png" }
+            { title: "A Prancha (Defesa)", desc: "Mantenha o core firme e respire.", img: "1.png" },
+            { title: "Cadeirinha (Wall Sit)", desc: "90 graus na parede. Não suba.", img: "2.png" },
+            { title: "Voo do Superman", desc: "Eleve o tronco e pernas. Segure.", img: "3.png" },
+            { title: "Estátua da Tocha", desc: "Trave o braço com o peso. Foco.", img: "4.png" }
         ];
 
         try {
@@ -147,41 +148,62 @@
         const audioW = document.getElementById('audio-work');
         const audioR = document.getElementById('audio-rest');
 
-        // MOTOR DE CROSSFADE PERSISTENTE
-        function crossfade() {
+        // MOTOR DE SINCRONIZAÇÃO DINÂMICA
+        function applyAudioSync() {
+            if (!isRunning) {
+                // Fade out total ao pausar o jogo
+                fadeToSilence(audioW);
+                fadeToSilence(audioR);
+                return;
+            }
+
+            const activeAudio = isResting ? audioR : audioW;
+            const idleAudio = isResting ? audioW : audioR;
+            const targetVol = isResting ? 1.0 : 0.4; // Descanso alto, Ataque reduzido
+
+            // Inicia o áudio da fase atual exatamente de onde parou
+            activeAudio.play().catch(()=>{});
+            
+            // Faz o crossfade de volume
+            smoothTransition(activeAudio, idleAudio, targetVol);
+        }
+
+        function smoothTransition(audioIn, audioOut, targetIn) {
             clearInterval(fadeInterval);
-            const audioIn = isResting ? audioR : audioW;
-            const audioOut = isResting ? audioW : audioR;
-            const targetVolIn = isResting ? 1.0 : 0.4; // Descanso alto, Ataque baixo
-
-            // Garante que o áudio de entrada comece/continue
-            audioIn.play().catch(()=>{});
-
             let step = 0.05;
             fadeInterval = setInterval(() => {
-                // Aumenta áudio In
-                if (audioIn.volume < targetVolIn) {
-                    audioIn.volume = Math.min(targetVolIn, audioIn.volume + step);
+                let finished = true;
+
+                if (audioIn.volume < targetIn) {
+                    audioIn.volume = Math.min(targetIn, audioIn.volume + step);
+                    finished = false;
                 }
-                // Abaixa áudio Out
                 if (audioOut.volume > 0) {
                     audioOut.volume = Math.max(0, audioOut.volume - step);
+                    finished = false;
                 } else {
-                    audioOut.pause(); // Pausa o que saiu pra salvar processamento
+                    audioOut.pause(); // Congela a música idle
                 }
 
-                // Finaliza o fade
-                if (audioIn.volume >= targetVolIn && audioOut.volume <= 0) {
-                    clearInterval(fadeInterval);
-                }
+                if (finished) clearInterval(fadeInterval);
             }, 100);
+        }
+
+        function fadeToSilence(audio) {
+            let fadeOut = setInterval(() => {
+                if (audio.volume > 0.05) {
+                    audio.volume -= 0.05;
+                } else {
+                    audio.volume = 0;
+                    audio.pause();
+                    clearInterval(fadeOut);
+                }
+            }, 50);
         }
 
         function loadExercise(index) {
             clearInterval(timerInterval); isRunning = false; exIndex = index; currentSet = 1; isResting = false;
-            audioW.pause(); audioR.pause(); 
-            audioW.volume = 0; audioR.volume = 0;
-
+            applyAudioSync();
             if(index >= workoutData.length) index = 0;
             const ex = workoutData[index];
             document.getElementById('ex-img').src = ex.img;
@@ -198,11 +220,11 @@
             document.getElementById('set-display').innerText = `${currentSet} / ${defaultSettings.sets}`;
             if (isResting) {
                 timeLeft = defaultSettings.rest; totalTimeForPhase = defaultSettings.rest;
-                document.getElementById('status-badge').innerText = "REGENERANDO...";
+                document.getElementById('status-badge').innerText = "RECUPERANDO ENERGIA";
                 document.getElementById('hud').className = "hud-container mode-rest";
             } else {
                 timeLeft = defaultSettings.time; totalTimeForPhase = defaultSettings.time;
-                document.getElementById('status-badge').innerText = isRunning ? "EM COMBATE!" : "AGUARDANDO";
+                document.getElementById('status-badge').innerText = isRunning ? "ATIVO: MANTENHA A POSIÇÃO" : "PRONTO?";
                 document.getElementById('hud').className = "hud-container";
             }
             updateTimerDisplay();
@@ -216,8 +238,7 @@
 
         function toggleTimer() {
             if (!audioUnlocked) {
-                audioW.src = defaultSettings.musicWork; 
-                audioR.src = defaultSettings.musicRest;
+                audioW.src = defaultSettings.musicWork; audioR.src = defaultSettings.musicRest;
                 audioW.volume = 0; audioR.volume = 0;
                 audioUnlocked = true;
             }
@@ -225,11 +246,11 @@
             if (isRunning) {
                 clearInterval(timerInterval); isRunning = false;
                 document.getElementById('btn-action').innerText = "RETOMAR";
-                audioW.pause(); audioR.pause();
+                applyAudioSync();
             } else {
                 isRunning = true;
                 document.getElementById('btn-action').innerText = "PAUSAR";
-                crossfade();
+                applyAudioSync();
                 timerInterval = setInterval(() => {
                     timeLeft--;
                     if(!isResting) sessionXP++;
@@ -243,21 +264,27 @@
             clearInterval(timerInterval); isRunning = false;
             if (!isResting) {
                 if (currentSet >= defaultSettings.sets) {
-                    exIndex++; if (exIndex >= workoutData.length) finish(); else loadExercise(exIndex);
-                } else { isResting = true; setupPhase(); toggleTimer(); }
-            } else { isResting = false; currentSet++; setupPhase(); toggleTimer(); }
+                    exIndex++; 
+                    if (exIndex >= workoutData.length) finish(); 
+                    else loadExercise(exIndex);
+                } else { 
+                    isResting = true; setupPhase(); toggleTimer(); 
+                }
+            } else { 
+                isResting = false; currentSet++; setupPhase(); toggleTimer(); 
+            }
         }
 
         function finish() {
             let d = new Date().toLocaleDateString('pt-BR');
             playerStats.history[d] = (playerStats.history[d] || 0) + sessionXP;
             localStorage.setItem('soldador_stats', JSON.stringify(playerStats));
-            alert("TREINO CONCLUÍDO!"); sessionXP = 0; loadExercise(0);
+            alert("MISSAO CUMPRIDA, SOLDADOR!"); sessionXP = 0; loadExercise(0);
         }
 
         function skip() { exIndex++; if (exIndex >= workoutData.length) finish(); else loadExercise(exIndex); }
 
-        // --- SISTEMA DE UPLOAD ---
+        // --- GESTAO DE ARQUIVOS (SAVES) ---
         let tempImgs = {}, tempAudios = {};
         function handleAudioUpload(input, type) {
             const reader = new FileReader();
@@ -290,7 +317,7 @@
             const list = document.getElementById('config-exercises-list'); list.innerHTML = '';
             workoutData.forEach((ex, i) => {
                 list.innerHTML += `<div class="config-ex-item">
-                    <b>${ex.title}</b><br>
+                    <b>Exercício ${i+1}: ${ex.title}</b><br>
                     <input type="text" id="cfg-l-${i}" value="${ex.img.length > 100 ? '[MEMÓRIA]' : ex.img}" readonly>
                     <input type="file" accept="image/*" onchange="handleImg(this, ${i})">
                 </div>`;
@@ -311,13 +338,13 @@
         }
 
         function addCustomExercise() {
-            const t = prompt("Nome:"); if(t) { workoutData.push({title: t, desc: "Personalizado", img: "1.png"}); openConfig(); }
+            const t = prompt("Nome do Skill:"); if(t) { workoutData.push({title: t, desc: "Posição customizada", img: "1.png"}); openConfig(); }
         }
 
         function openStats() {
             const log = document.getElementById('calendar-log'); log.innerHTML = '';
             Object.entries(playerStats.history).sort().reverse().forEach(([d, s]) => {
-                log.innerHTML += `<div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #333"><span>${d}</span><b>${Math.floor(s/60)} min</b></div>`;
+                log.innerHTML += `<div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #333"><span>${d}</span><b>${Math.floor(s/60)} Min de Foco</b></div>`;
             });
             document.getElementById('modal-stats').style.display = 'flex';
         }
