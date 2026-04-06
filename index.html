@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HUD do Soldador - Full Memory Edition</title>
+    <title>HUD do Soldador - GitHub Audio Edition</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -181,8 +181,8 @@
             <input type="number" id="cfg-sets" value="3" style="margin-bottom: 15px;">
 
             <div style="border-top: 1px solid #444; padding-top: 10px;">
-                <h4>🎵 Upload de Trilha Sonora (.mp3)</h4>
-                <div style="font-size:0.75em; color:#888; margin-bottom: 10px;">Atenção: Use arquivos pequenos (MP3 curto) para não estourar a memória.</div>
+                <h4>🎵 Trilha Sonora (GitHub)</h4>
+                <div style="font-size:0.75em; color:#888; margin-bottom: 10px;">Lendo arquivos 'ataque.mp3' e 'descanso.mp3' da sua pasta.</div>
                 
                 <label>Combate (Alto BPM)</label>
                 <input type="text" id="cfg-music-work" placeholder="[Nenhum arquivo ou link]" readonly>
@@ -221,19 +221,21 @@
     </div>
 
     <script>
+        // CONFIGURAÇÕES PADRÃO (Puxando do seu GitHub)
         let defaultSettings = { 
             time: 45, rest: 30, sets: 3,
-            musicWork: "", musicRest: ""
+            musicWork: "ataque.mp3", 
+            musicRest: "descanso.mp3"
         };
         let playerStats = { history: {} }; 
         let tempImageUploads = {}; 
         let tempAudioUploads = { work: "", rest: "" };
         
         let workoutData = [
-            { title: "A Prancha (Defesa)", desc: "Cotovelos no chão, corpo reto.", img: "https://images.unsplash.com/photo-1566241142559-40e1dab266c6?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" },
-            { title: "Cadeirinha (Wall Sit)", desc: "Costas na parede, 90 graus.", img: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" },
-            { title: "Voo do Superman", desc: "Eleve braços e pernas deitado.", img: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" },
-            { title: "Estátua da Tocha", desc: "Segure um peso e não trema.", img: "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" }
+            { title: "A Prancha (Defesa)", desc: "Cotovelos no chão, corpo reto.", img: "1.jpg" },
+            { title: "Cadeirinha (Wall Sit)", desc: "Costas na parede, 90 graus.", img: "2.jpg" },
+            { title: "Voo do Superman", desc: "Eleve braços e pernas deitado.", img: "3.jpg" },
+            { title: "Estátua da Tocha", desc: "Segure um peso e não trema.", img: "4.jpg" }
         ];
 
         try {
@@ -261,8 +263,8 @@
         }
 
         function updateAudioEngine(forcePause = false) {
-            if (audioWork.src !== defaultSettings.musicWork) audioWork.src = defaultSettings.musicWork;
-            if (audioRest.src !== defaultSettings.musicRest) audioRest.src = defaultSettings.musicRest;
+            if (audioWork.getAttribute('src') !== defaultSettings.musicWork) audioWork.src = defaultSettings.musicWork;
+            if (audioRest.getAttribute('src') !== defaultSettings.musicRest) audioRest.src = defaultSettings.musicRest;
 
             if (forcePause || !isRunning) {
                 audioWork.pause(); audioRest.pause(); return;
@@ -367,7 +369,7 @@
 
         function handleAudioUpload(input, type) {
             const file = input.files[0];
-            if (file.size > 4000000) { alert("Arquivo muito grande! Use um MP3 de até 4MB."); return; }
+            if (file.size > 4500000) { alert("Arquivo muito grande! Use um MP3 de até 4MB."); return; }
             const reader = new FileReader();
             reader.onload = function(e) {
                 tempAudioUploads[type] = e.target.result;
@@ -380,8 +382,8 @@
             document.getElementById('cfg-time').value = defaultSettings.time;
             document.getElementById('cfg-rest').value = defaultSettings.rest;
             document.getElementById('cfg-sets').value = defaultSettings.sets;
-            document.getElementById('cfg-music-work').value = defaultSettings.musicWork ? "[Áudio na Memória]" : "";
-            document.getElementById('cfg-music-rest').value = defaultSettings.musicRest ? "[Áudio na Memória]" : "";
+            document.getElementById('cfg-music-work').value = defaultSettings.musicWork.length > 50 ? "[Áudio na Memória]" : defaultSettings.musicWork;
+            document.getElementById('cfg-music-rest').value = defaultSettings.musicRest.length > 50 ? "[Áudio na Memória]" : defaultSettings.musicRest;
             const list = document.getElementById('config-exercises-list'); list.innerHTML = '';
             workoutData.forEach((ex, index) => {
                 list.innerHTML += `<div class="config-ex-item">
@@ -403,19 +405,19 @@
             try { 
                 localStorage.setItem('soldador_cfg', JSON.stringify(defaultSettings)); 
                 localStorage.setItem('soldador_workout', JSON.stringify(workoutData));
-            } catch(e) { alert("Erro: Memória cheia! Tente áudios menores."); }
+            } catch(e) { alert("Erro de memória! Tente fotos/áudios menores."); }
             closeModals(); loadExercise(exIndex);
         }
 
         function addCustomExercise() {
             const t = prompt("Nome do exercício:"); if(!t) return;
-            workoutData.push({ title: t, desc: "Personalizado", img: "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" });
+            workoutData.push({ title: t, desc: "Personalizado", img: "1.jpg" });
             openConfig();
         }
 
         function openStats() {
             const log = document.getElementById('calendar-log'); log.innerHTML = '';
-            Object.entries(playerStats.history).forEach(([d, s]) => {
+            Object.entries(playerStats.history).sort().reverse().forEach(([d, s]) => {
                 log.innerHTML += `<div class="log-entry"><span>${d}</span><b>${Math.floor(s/60)} Min</b></div>`;
             });
             document.getElementById('modal-stats').style.display = 'flex';
