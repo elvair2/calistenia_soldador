@@ -2,8 +2,8 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HUD do Soldador - V12.4</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HUD do Soldador - V12.5</title>
     <style>
         :root {
             --bg-color: #0d0d0d; --panel-bg: #1a1a1a; --accent-color: #ff8c00;
@@ -13,7 +13,7 @@
             background-color: var(--bg-color); color: var(--text-color);
             font-family: 'Segoe UI', sans-serif; display: flex; 
             justify-content: center; align-items: center; min-height: 100vh; margin: 0;
-            user-select: none;
+            user-select: none; touch-action: manipulation;
         }
         .hud-container {
             background: var(--panel-bg); width: 90%; max-width: 380px;
@@ -54,7 +54,7 @@
     <audio id="audio-beep" src="beep.mp3"></audio>
 
     <div class="hud-container" id="hud">
-        <div class="version-tag">V12.4</div>
+        <div class="version-tag">V12.5</div>
         <div class="header">STATUS: <span id="status-text">STANDBY</span></div>
 
         <div class="top-menu">
@@ -107,22 +107,14 @@
         let wakeLock = null;
         const audioW = document.getElementById('audio-work'), audioR = document.getElementById('audio-rest'), audioB = document.getElementById('audio-beep');
 
-        // FUNÇÃO ANTI-DESLIGAMENTO (WAKE LOCK)
         async function requestWakeLock() {
             if ('wakeLock' in navigator) {
-                try {
-                    wakeLock = await navigator.wakeLock.request('screen');
-                } catch (err) {
-                    console.log("Wake Lock erro:", err);
-                }
+                try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
             }
         }
 
         function releaseWakeLock() {
-            if (wakeLock !== null) {
-                wakeLock.release();
-                wakeLock = null;
-            }
+            if (wakeLock !== null) { wakeLock.release(); wakeLock = null; }
         }
 
         function init() { loadExercise(0); }
@@ -154,7 +146,6 @@
 
         function toggleTimer() {
             if (!audioUnlocked) {
-                // Destrava áudios e Beep no primeiro clique
                 audioW.src = settings.musicWork; 
                 audioR.src = settings.musicRest;
                 audioB.play().then(() => { audioB.pause(); audioB.currentTime = 0; });
@@ -168,19 +159,16 @@
                 releaseWakeLock();
             } else {
                 isRunning = true;
-                requestWakeLock(); // Ativa Wake Lock
+                requestWakeLock();
                 document.getElementById('btn-action').innerText = "PAUSAR";
                 if(isResting) audioR.play().catch(()=>{}); else audioW.play().catch(()=>{});
                 
                 timerInterval = setInterval(() => {
                     timeLeft--;
-                    
-                    // GATILHO BEEP: 7 SEGUNDOS ANTES DO FIM
                     if (timeLeft === 7) {
                         audioB.currentTime = 0;
                         audioB.play().catch(e => console.log("Beep bloqueado"));
                     }
-
                     updateDisplay();
                     if(timeLeft <= 0) handleEnd();
                 }, 1000);
@@ -189,9 +177,10 @@
 
         function handleEnd() {
             clearInterval(timerInterval); isRunning = false;
-            audioW.pause(); audioW.currentTime = 0;
-            audioR.pause(); audioR.currentTime = 0;
-            audioB.pause(); audioB.currentTime = 0;
+            // MUDANÇA: A música apenas pausa, permitindo continuar de onde parou no próximo ciclo
+            audioW.pause(); 
+            audioR.pause(); 
+            audioB.pause(); audioB.currentTime = 0; // Beep reseta para tocar de novo
 
             if (!isResting) {
                 if (currentSet >= settings.sets) {
