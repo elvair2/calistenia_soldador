@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HUD do Soldador - V12.3</title>
+    <title>HUD do Soldador - V12.4</title>
     <style>
         :root {
             --bg-color: #0d0d0d; --panel-bg: #1a1a1a; --accent-color: #ff8c00;
@@ -54,7 +54,7 @@
     <audio id="audio-beep" src="beep.mp3"></audio>
 
     <div class="hud-container" id="hud">
-        <div class="version-tag">V12.3</div>
+        <div class="version-tag">V12.4</div>
         <div class="header">STATUS: <span id="status-text">STANDBY</span></div>
 
         <div class="top-menu">
@@ -104,7 +104,26 @@
         } catch(e) {}
 
         let exIndex = 0, currentSet = 1, isResting = false, timeLeft = 0, totalTime = 0, timerInterval = null, isRunning = false, audioUnlocked = false;
+        let wakeLock = null;
         const audioW = document.getElementById('audio-work'), audioR = document.getElementById('audio-rest'), audioB = document.getElementById('audio-beep');
+
+        // FUNÇÃO ANTI-DESLIGAMENTO (WAKE LOCK)
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                } catch (err) {
+                    console.log("Wake Lock erro:", err);
+                }
+            }
+        }
+
+        function releaseWakeLock() {
+            if (wakeLock !== null) {
+                wakeLock.release();
+                wakeLock = null;
+            }
+        }
 
         function init() { loadExercise(0); }
 
@@ -135,25 +154,31 @@
 
         function toggleTimer() {
             if (!audioUnlocked) {
-                audioW.src = settings.musicWork; audioR.src = settings.musicRest;
+                // Destrava áudios e Beep no primeiro clique
+                audioW.src = settings.musicWork; 
+                audioR.src = settings.musicRest;
+                audioB.play().then(() => { audioB.pause(); audioB.currentTime = 0; });
                 audioUnlocked = true;
             }
+
             if (isRunning) {
                 clearInterval(timerInterval); isRunning = false;
                 audioW.pause(); audioR.pause(); audioB.pause();
                 document.getElementById('btn-action').innerText = "RETOMAR";
+                releaseWakeLock();
             } else {
                 isRunning = true;
+                requestWakeLock(); // Ativa Wake Lock
                 document.getElementById('btn-action').innerText = "PAUSAR";
                 if(isResting) audioR.play().catch(()=>{}); else audioW.play().catch(()=>{});
                 
                 timerInterval = setInterval(() => {
                     timeLeft--;
                     
-                    // GATILHO SINCRONIZADO: 7 segundos antes de acabar
+                    // GATILHO BEEP: 7 SEGUNDOS ANTES DO FIM
                     if (timeLeft === 7) {
                         audioB.currentTime = 0;
-                        audioB.play().catch(()=>{});
+                        audioB.play().catch(e => console.log("Beep bloqueado"));
                     }
 
                     updateDisplay();
@@ -164,7 +189,6 @@
 
         function handleEnd() {
             clearInterval(timerInterval); isRunning = false;
-            // PARADA TOTAL DE ÁUDIO NO FIM DA FASE
             audioW.pause(); audioW.currentTime = 0;
             audioR.pause(); audioR.currentTime = 0;
             audioB.pause(); audioB.currentTime = 0;
@@ -183,7 +207,7 @@
             if (exIndex >= workoutData.length) finish(); else loadExercise(exIndex); 
         }
 
-        function finish() { alert("MISSÃO CUMPRIDA!"); loadExercise(0); }
+        function finish() { releaseWakeLock(); alert("MISSÃO CUMPRIDA!"); loadExercise(0); }
 
         document.getElementById('open-edit').onclick = function() {
             document.getElementById('cfg-time').value = settings.time;
