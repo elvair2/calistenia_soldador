@@ -3,41 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HUD do Soldador - Legacy v11.2</title>
+    <title>HUD do Soldador - V12.2</title>
     <style>
         :root {
-            --bg-color: #121212; --panel-bg: #1e1e1e; --accent-color: #ff8c00;
-            --rest-color: #00e5ff; --text-color: #e0e0e0; --muted-text: #a0a0a0;
+            --bg-color: #0d0d0d; --panel-bg: #1a1a1a; --accent-color: #ff8c00;
+            --rest-color: #00e5ff; --text-color: #f0f0f0; --muted: #666;
         }
         body {
             background-color: var(--bg-color); color: var(--text-color);
-            font-family: 'Segoe UI', Tahoma, sans-serif;
-            display: flex; justify-content: center; align-items: center;
-            min-height: 100vh; margin: 0; user-select: none;
+            font-family: 'Segoe UI', sans-serif; display: flex; 
+            justify-content: center; align-items: center; min-height: 100vh; margin: 0;
+            user-select: none;
         }
         .hud-container {
-            background: var(--panel-bg); width: 90%; max-width: 400px;
-            padding: 25px; border-radius: 12px; border: 1px solid #333;
-            box-shadow: 0 0 20px rgba(255, 140, 0, 0.15); text-align: center;
-            position: relative; overflow: hidden;
+            background: var(--panel-bg); width: 90%; max-width: 380px;
+            padding: 25px; border-radius: 15px; border: 1px solid #333;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center;
+            position: relative;
         }
-        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .header { font-size: 0.8em; color: var(--accent-color); text-transform: uppercase; letter-spacing: 2px; font-weight: bold; }
-        .mini-btn { background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 0.8em; }
-        .status-badge { display: inline-block; padding: 4px 10px; background: #333; border-radius: 4px; font-size: 0.8em; font-weight: bold; margin-bottom: 15px; border: 1px solid #555; }
-        .image-container { width: 100%; height: 180px; background-color: #2a2a2a; border-radius: 8px; margin-bottom: 15px; overflow: hidden; display: flex; justify-content: center; align-items: center; border: 2px solid #333; }
+        /* TAG DA VERSÃO NO TOPO */
+        .version-tag {
+            position: absolute; top: 10px; right: 15px;
+            font-size: 0.6rem; color: var(--muted); font-weight: bold;
+        }
+        .header { font-size: 0.75rem; color: var(--accent-color); font-weight: bold; letter-spacing: 2px; margin-bottom: 20px; }
+        .top-menu { display: flex; justify-content: space-between; margin-bottom: 15px; }
+        .mini-btn { background: #252525; border: 1px solid #444; color: #fff; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 0.75rem; }
+        
+        .image-container { width: 100%; height: 180px; background-color: #222; border-radius: 10px; margin-bottom: 15px; overflow: hidden; border: 2px solid #333; display: flex; justify-content: center; align-items: center; }
         img { width: 100%; height: 100%; object-fit: cover; }
-        .timer { font-size: 4em; font-weight: bold; color: var(--accent-color); font-family: 'Courier New', monospace; margin: 5px 0; }
-        .progress-bar-container { width: 100%; height: 12px; background-color: #222; border-radius: 6px; border: 1px solid #444; margin: 15px 0 20px 0; overflow: hidden; }
-        .progress-bar { height: 100%; width: 0%; background-color: var(--accent-color); transition: width 1s linear; }
-        .controls { display: flex; gap: 10px; }
-        .btn-main { flex: 1; background-color: #333; color: var(--text-color); border: 1px solid #555; padding: 12px; border-radius: 6px; font-size: 0.9em; font-weight: bold; cursor: pointer; text-transform: uppercase; }
-        #btn-action { background-color: var(--accent-color); color: #000; border: none; }
-        .modal { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(18, 18, 18, 0.98); z-index: 10; flex-direction: column; padding: 25px; box-sizing: border-box; text-align: left; overflow-y: auto; }
-        .modal input { width: 100%; background: #2a2a2a; border: 1px solid #555; color: #fff; padding: 10px; margin: 5px 0 15px 0; border-radius: 4px; box-sizing: border-box; }
+
+        .timer { font-size: 4.5rem; font-weight: bold; color: var(--accent-color); font-family: 'Courier New', monospace; margin: 10px 0; }
+        .bar-bg { width: 100%; height: 10px; background: #111; border-radius: 5px; overflow: hidden; margin-bottom: 25px; border: 1px solid #333; }
+        .bar-fill { height: 100%; width: 0%; background: var(--accent-color); transition: width 1s linear; }
+        
+        .btn-main { width: 100%; padding: 15px; background: #333; color: #fff; border: 1px solid #555; border-radius: 8px; font-weight: bold; cursor: pointer; text-transform: uppercase; margin-bottom: 10px; }
+        #btn-action { background: var(--accent-color); color: #000; border: none; font-size: 1.1rem; }
+
+        /* MODAL DE EDIÇÃO FIXO */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.97); z-index: 1000; flex-direction: column; padding: 30px; box-sizing: border-box; text-align: left; overflow-y: auto; }
+        .modal input { width: 100%; background: #222; border: 1px solid #444; color: #fff; padding: 12px; border-radius: 8px; margin: 10px 0 20px 0; }
+        .modal label { font-size: 0.8rem; color: var(--accent-color); font-weight: bold; }
+
         .mode-rest .timer { color: var(--rest-color); }
-        .mode-rest .progress-bar { background-color: var(--rest-color); }
-        .mode-rest .status-badge { color: var(--rest-color); border-color: var(--rest-color); }
+        .mode-rest .bar-fill { background: var(--rest-color); }
     </style>
 </head>
 <body>
@@ -46,88 +55,84 @@
     <audio id="audio-rest" loop></audio>
 
     <div class="hud-container" id="hud">
-        <div class="top-bar">
-            <div class="header">Estamina Ocupacional</div>
-            <div class="mini-menu">
-                <button class="mini-btn" onclick="openStats()">📅 Log</button>
-                <button class="mini-btn" onclick="openConfig()">⚙️ Edit</button>
-            </div>
+        <div class="version-tag">V12.2</div>
+        <div class="header">STATUS: <span id="status-text">STANDBY</span></div>
+
+        <div class="top-menu">
+            <button class="mini-btn" id="open-edit">⚙️ EDITAR</button>
+            <button class="mini-btn" onclick="location.reload()">🔄 REFRESH</button>
         </div>
+
+        <div class="image-container"><img id="ex-img" src="1.png" alt="Exercício"></div>
+        <h2 id="ex-title">Pronto</h2>
         
-        <div class="status-badge" id="status-badge">STANDBY</div>
-        <div class="image-container"><img id="ex-img" src="" alt="Referência"></div>
-
-        <h2 id="ex-title">Iniciando...</h2>
-        <div id="ex-desc" style="font-size: 0.85em; color: var(--muted-text); margin-bottom: 15px; min-height: 35px;">...</div>
-
-        <div style="display: flex; justify-content: space-between; font-size: 0.9em; margin-bottom: 10px;">
+        <div style="display: flex; justify-content: space-between; font-size: 0.8em; margin-bottom: 10px; color: #888;">
             <span>Série: <b id="set-display">1 / 3</b></span>
             <span>Skill: <b id="ex-display">1 / 4</b></span>
         </div>
 
         <div class="timer" id="timer-display">00:00</div>
-        <div class="progress-bar-container"><div class="progress-bar" id="p-bar"></div></div>
+        <div class="bar-bg"><div class="bar-fill" id="p-bar"></div></div>
 
-        <div class="controls">
-            <button class="btn-main" id="btn-action" onclick="toggleTimer()">INICIAR</button>
-            <button class="btn-main" onclick="skip()">PULAR</button>
-        </div>
+        <button class="btn-main" id="btn-action" onclick="toggleTimer()">INICIAR</button>
+        <button class="btn-main" onclick="skip()">PULAR</button>
 
         <div class="modal" id="modal-config">
-            <h3>⚙️ Editar Inventário</h3>
-            <label>Tensão (s)</label><input type="number" id="cfg-time">
-            <label>Descanso (s)</label><input type="number" id="cfg-rest">
-            <label>Séries</label><input type="number" id="cfg-sets">
-            <h4>🎵 Áudios</h4>
-            <label>Ataque:</label><input type="file" accept="audio/*" onchange="handleAudio(this, 'work')">
-            <label>Descanso:</label><input type="file" accept="audio/*" onchange="handleAudio(this, 'rest')">
-            <div style="display:flex; gap:10px; margin-top:20px">
-                <button class="btn-main" onclick="saveConfig()" style="background:var(--accent-color); color:#000;">SALVAR</button>
-                <button class="btn-main" onclick="closeModals()">FECHAR</button>
-            </div>
-        </div>
+            <h2 style="color:var(--accent-color); margin-top:0;">EDITAR MISSÃO</h2>
+            
+            <label>TEMPO DE ATAQUE (s)</label>
+            <input type="number" id="cfg-time" value="45">
+            
+            <label>TEMPO DE DESCANSO (s)</label>
+            <input type="number" id="cfg-rest" value="30">
 
-        <div class="modal" id="modal-stats">
-            <h3>📅 Histórico de Missão</h3>
-            <div id="calendar-log">Nenhuma missão hoje.</div>
-            <button class="btn-main" style="width:100%; margin-top:20px" onclick="closeModals()">FECHAR</button>
+            <label>SÉRIES POR EXERCÍCIO</label>
+            <input type="number" id="cfg-sets" value="3">
+
+            <div style="display:flex; gap:10px; margin-top:20px">
+                <button class="btn-main" onclick="saveConfig()" style="background:var(--accent-color); color:#000; border:none;">SALVAR</button>
+                <button class="btn-main" id="close-edit">CANCELAR</button>
+            </div>
         </div>
     </div>
 
     <script>
+        // Memória e Configurações
         let settings = { time: 45, rest: 30, sets: 3, musicWork: "ataque.mp3", musicRest: "descanso.mp3" };
         let workoutData = [
-            { title: "A Prancha (Defesa)", desc: "Mantenha o core firme e respire.", img: "1.png" },
-            { title: "Cadeirinha (Wall Sit)", desc: "90 graus na parede. Foco.", img: "2.png" },
-            { title: "Voo do Superman", desc: "Eleve o tronco e pernas.", img: "3.png" },
-            { title: "Estátua da Tocha", desc: "Segure o peso e trave.", img: "4.png" }
+            { title: "A Prancha", img: "1.png" },
+            { title: "Cadeirinha", img: "2.png" },
+            { title: "Superman", img: "3.png" },
+            { title: "Tocha", img: "4.png" }
         ];
 
         try {
-            const s = localStorage.getItem('soldador_cfg'); if(s) settings = JSON.parse(s);
-        } catch(e){}
+            const saved = localStorage.getItem('soldador_cfg');
+            if(saved) settings = JSON.parse(saved);
+        } catch(e) {}
 
-        let exIndex = 0, currentSet = 1, isResting = false, timeLeft = 0, totalTime = 0, timer = null, isRunning = false, audioUnlocked = false;
+        let exIndex = 0, currentSet = 1, isResting = false, timeLeft = 0, totalTime = 0, timerInterval = null, isRunning = false, audioUnlocked = false;
         const audioW = document.getElementById('audio-work'), audioR = document.getElementById('audio-rest');
 
+        function init() {
+            loadExercise(0);
+        }
+
         function loadExercise(index) {
-            clearInterval(timer); isRunning = false; 
-            if(index >= workoutData.length) index = 0;
+            clearInterval(timerInterval); isRunning = false;
             exIndex = index; currentSet = 1; isResting = false;
             const ex = workoutData[index];
             document.getElementById('ex-img').src = ex.img;
             document.getElementById('ex-title').innerText = ex.title;
-            document.getElementById('ex-desc').innerText = ex.desc;
             document.getElementById('ex-display').innerText = `${index + 1} / ${workoutData.length}`;
             setupPhase();
-            document.getElementById('btn-action').innerText = "INICIAR";
         }
 
         function setupPhase() {
             timeLeft = isResting ? settings.rest : settings.time;
             totalTime = timeLeft;
             document.getElementById('set-display').innerText = `${currentSet} / ${settings.sets}`;
-            document.getElementById('status-badge').innerText = isResting ? "REGENERANDO" : "COMBATE";
+            document.getElementById('status-text').innerText = isResting ? "REGENERANDO" : "COMBATE";
             document.getElementById('hud').className = isResting ? "hud-container mode-rest" : "hud-container";
             updateDisplay();
         }
@@ -144,14 +149,14 @@
                 audioUnlocked = true;
             }
             if (isRunning) {
-                clearInterval(timer); isRunning = false;
+                clearInterval(timerInterval); isRunning = false;
                 audioW.pause(); audioR.pause();
                 document.getElementById('btn-action').innerText = "RETOMAR";
             } else {
                 isRunning = true;
                 document.getElementById('btn-action').innerText = "PAUSAR";
-                if(isResting) audioR.play(); else audioW.play();
-                timer = setInterval(() => {
+                if(isResting) audioR.play().catch(()=>{}); else audioW.play().catch(()=>{});
+                timerInterval = setInterval(() => {
                     timeLeft--;
                     updateDisplay();
                     if(timeLeft <= 0) handleEnd();
@@ -160,7 +165,7 @@
         }
 
         function handleEnd() {
-            clearInterval(timer); isRunning = false;
+            clearInterval(timerInterval); isRunning = false;
             audioW.pause(); audioR.pause();
             if (!isResting) {
                 if (currentSet >= settings.sets) {
@@ -169,36 +174,36 @@
             } else { isResting = false; currentSet++; setupPhase(); toggleTimer(); }
         }
 
-        function finish() { alert("MISSÃO CUMPRIDA!"); loadExercise(0); }
-        function skip() { clearInterval(timer); audioW.pause(); audioR.pause(); exIndex++; if (exIndex >= workoutData.length) finish(); else loadExercise(exIndex); }
+        function skip() { 
+            clearInterval(timerInterval); 
+            audioW.pause(); audioR.pause();
+            exIndex++; 
+            if (exIndex >= workoutData.length) finish(); else loadExercise(exIndex); 
+        }
 
-        function openConfig() {
+        function finish() { alert("MISSÃO CUMPRIDA!"); loadExercise(0); }
+
+        // --- SISTEMA DE EDIÇÃO FIXO ---
+        document.getElementById('open-edit').onclick = function() {
             document.getElementById('cfg-time').value = settings.time;
             document.getElementById('cfg-rest').value = settings.rest;
             document.getElementById('cfg-sets').value = settings.sets;
             document.getElementById('modal-config').style.display = 'flex';
-        }
+        };
 
-        let temp = {};
-        function handleAudio(input, type) {
-            const reader = new FileReader();
-            reader.onload = (e) => { temp[type] = e.target.result; };
-            reader.readAsDataURL(input.files[0]);
-        }
+        document.getElementById('close-edit').onclick = function() {
+            document.getElementById('modal-config').style.display = 'none';
+        };
 
         function saveConfig() {
-            settings.time = parseInt(document.getElementById('cfg-time').value);
-            settings.rest = parseInt(document.getElementById('cfg-rest').value);
-            settings.sets = parseInt(document.getElementById('cfg-sets').value);
-            if(temp.work) settings.musicWork = temp.work;
-            if(temp.rest) settings.musicRest = temp.rest;
+            settings.time = parseInt(document.getElementById('cfg-time').value) || 45;
+            settings.rest = parseInt(document.getElementById('cfg-rest').value) || 30;
+            settings.sets = parseInt(document.getElementById('cfg-sets').value) || 3;
             localStorage.setItem('soldador_cfg', JSON.stringify(settings));
             location.reload();
         }
 
-        function openStats() { document.getElementById('modal-stats').style.display = 'flex'; }
-        function closeModals() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
-        window.onload = () => loadExercise(0);
+        window.onload = init;
     </script>
 </body>
 </html>
