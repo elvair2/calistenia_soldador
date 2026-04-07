@@ -3,38 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Soldier HUD v11.7 - Repair Build</title>
+    <title>HUD v12.0 - Soldier Sync</title>
     <style>
         :root {
-            --bg-color: #0c0c0c; --panel-bg: #181818; --accent-color: #ff8c00;
-            --rest-color: #00e5ff; --text-color: #f0f0f0; --muted: #888;
+            --bg: #0a0a0a; --panel: #151515; --orange: #ff8c00;
+            --cyan: #00e5ff; --txt: #f0f0f0; --dim: #555;
         }
         body {
-            background: var(--bg-color); color: var(--text-color);
+            background: var(--bg); color: var(--txt);
             font-family: 'Segoe UI', sans-serif; display: flex; 
             justify-content: center; align-items: center; min-height: 100vh; margin: 0;
         }
         .hud-container {
-            background: var(--panel-bg); width: 90%; max-width: 380px;
-            padding: 20px; border-radius: 15px; border: 1px solid #333;
-            box-shadow: 0 0 25px rgba(255, 140, 0, 0.1); text-align: center;
+            background: var(--panel); width: 90%; max-width: 360px;
+            padding: 25px; border-radius: 20px; border: 1px solid #222;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5); text-align: center;
+            position: relative;
         }
-        .header { font-size: 0.75rem; color: var(--accent-color); letter-spacing: 2px; font-weight: bold; margin-bottom: 15px; }
-        .mini-btn { background: #252525; border: 1px solid #444; color: #fff; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 0.7rem; }
-        .timer { font-size: 4.5rem; font-weight: bold; color: var(--accent-color); font-family: 'Courier New', monospace; margin: 10px 0; }
-        .progress-bar-container { width: 100%; height: 10px; background: #111; border-radius: 5px; border: 1px solid #333; overflow: hidden; margin-bottom: 20px; }
-        .progress-bar { height: 100%; width: 0%; background: var(--accent-color); transition: width 1s linear; }
-        .btn-main { width: 100%; padding: 14px; background: #333; color: #fff; border: 1px solid #555; border-radius: 8px; font-weight: bold; cursor: pointer; text-transform: uppercase; margin-bottom: 10px; }
-        #btn-action { background: var(--accent-color); color: #000; border: none; }
+        /* TAG DE VERSÃO NO TOPO */
+        .version-tag {
+            position: absolute; top: 10px; right: 15px;
+            font-size: 0.6rem; color: var(--dim); letter-spacing: 1px; font-weight: bold;
+        }
+        .header { font-size: 0.7rem; color: var(--orange); font-weight: bold; letter-spacing: 2px; margin-bottom: 20px; }
+        .timer { font-size: 4.5rem; font-weight: bold; color: var(--orange); font-family: 'Courier New', monospace; margin: 15px 0; }
+        .bar-bg { width: 100%; height: 8px; background: #111; border-radius: 4px; overflow: hidden; margin-bottom: 25px; border: 1px solid #333; }
+        .bar-fill { height: 100%; width: 0%; background: var(--orange); transition: width 1s linear; box-shadow: 0 0 10px var(--orange); }
+        .btn-main { width: 100%; padding: 15px; background: #222; color: #fff; border: 1px solid #444; border-radius: 10px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+        #btn-action { background: var(--orange); color: #000; border: none; font-size: 1.1rem; }
         
-        /* MODAL FIX */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999; flex-direction: column; padding: 30px; box-sizing: border-box; overflow-y: auto; text-align: left; }
-        .modal h3 { color: var(--accent-color); margin-top: 0; }
-        .modal label { font-size: 0.8rem; color: var(--muted); display: block; margin-top: 15px; }
-        .modal input { width: 100%; background: #222; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 5px; margin-top: 5px; }
-        
-        .mode-rest .timer { color: var(--rest-color); }
-        .mode-rest .progress-bar { background: var(--rest-color); }
+        /* MODAIS */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.96); z-index: 100; flex-direction: column; padding: 30px; box-sizing: border-box; }
+        .modal input { width: 100%; background: #222; border: 1px solid #444; color: #fff; padding: 12px; border-radius: 8px; margin: 10px 0 20px 0; }
+        .modal label { font-size: 0.8rem; color: var(--dim); }
+
+        .mode-rest .timer { color: var(--cyan); }
+        .mode-rest .bar-fill { background: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
     </style>
 </head>
 <body>
@@ -44,61 +48,54 @@
     <audio id="audio-beep"></audio>
 
     <div class="hud-container" id="hud">
-        <div class="header">SYSTEM STATUS: <span id="status-text">STANDBY</span></div>
+        <div class="version-tag">V12.0</div>
         
-        <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-            <button class="mini-btn" onclick="openConfig()">⚙️ EDITAR</button>
-            <button class="mini-btn" onclick="location.reload()">🔄 RESET</button>
+        <div class="header">STATUS: <span id="status-txt">STANDBY</span></div>
+
+        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+            <button onclick="openConfig()" style="background:none; border:1px solid #444; color:#888; padding:5px 10px; border-radius:5px; cursor:pointer; font-size:0.7rem;">⚙️ EDITAR</button>
+            <button onclick="location.reload()" style="background:none; border:1px solid #444; color:#888; padding:5px 10px; border-radius:5px; cursor:pointer; font-size:0.7rem;">🔄 REFRESH</button>
         </div>
 
         <div class="timer" id="timer-display">00:00</div>
-        <div class="progress-bar-container"><div class="progress-bar" id="p-bar"></div></div>
+        <div class="bar-bg"><div class="bar-fill" id="p-bar"></div></div>
 
-        <button class="btn-main" id="btn-action" onclick="toggleTimer()">INICIAR MISSÃO</button>
-        <button class="btn-main" onclick="skip()">PULAR EXERCÍCIO</button>
+        <button class="btn-main" id="btn-action" onclick="toggleTimer()">INICIAR</button>
+        <button class="btn-main" onclick="skip()">PULAR</button>
 
         <div class="modal" id="modal-config">
-            <h3>⚙️ CONFIGURAÇÕES</h3>
+            <h2 style="color:var(--orange)">CONFIGURAÇÕES</h2>
             
-            <label>TEMPO DE ATAQUE (s)</label>
+            <label>TEMPO DE ATAQUE (segundos)</label>
             <input type="number" id="cfg-time">
             
-            <label>TEMPO DE DESCANSO (s)</label>
+            <label>TEMPO DE DESCANSO (segundos)</label>
             <input type="number" id="cfg-rest">
 
-            <label>ÁUDIO DO BEEP (7s ANTES)</label>
-            <input type="file" accept="audio/*" onchange="handleAudioUpload(this, 'beep')">
-            <button class="mini-btn" style="width:100%; margin-top:5px" onclick="testBeep()">🔊 TESTAR BEEP</button>
+            <label>UPLOAD BEEP (7s ANTES)</label>
+            <input type="file" accept="audio/*" onchange="handleAudio(this, 'beep')">
+            <button onclick="testBeep()" style="padding:5px; width:100%; background:#333; color:#fff; border:1px solid #555; border-radius:5px; cursor:pointer;">🔊 TESTAR BEEP</button>
 
-            <label>ÁUDIO DE ATAQUE</label>
-            <input type="file" accept="audio/*" onchange="handleAudioUpload(this, 'work')">
+            <label>UPLOAD MÚSICA ATAQUE</label>
+            <input type="file" accept="audio/*" onchange="handleAudio(this, 'work')">
 
             <div style="display:flex; gap:10px; margin-top:30px">
-                <button class="btn-main" onclick="saveConfig()" style="background: var(--accent-color); color: #000;">SALVAR</button>
-                <button class="btn-main" onclick="closeModals()">CANCELAR</button>
+                <button class="btn-main" onclick="saveConfig()" style="background:var(--orange); color:#000; border:none;">SALVAR</button>
+                <button class="btn-main" onclick="closeModals()">FECHAR</button>
             </div>
         </div>
     </div>
 
     <script>
-        // Configurações e Memória
-        let settings = { time: 45, rest: 30, beep: "beep.mp3", work: "ataque.mp3", restA: "descanso.mp3" };
+        // Memória do Soldador
+        let settings = { time: 45, rest: 30, beep: "", work: "", restA: "" };
         try {
-            const saved = localStorage.getItem('soldador_cfg');
+            const saved = localStorage.getItem('soldador_v12_cfg');
             if(saved) settings = JSON.parse(saved);
-        } catch(e) { console.log("Erro ao carregar memória."); }
+        } catch(e) {}
 
-        let timeLeft = 0, totalTime = 0, isResting = false, isRunning = false, timerInterval = null, audioUnlocked = false;
-        const audioW = document.getElementById('audio-work'), 
-              audioR = document.getElementById('audio-rest'), 
-              audioB = document.getElementById('audio-beep');
-
-        // Inicialização
-        function init() {
-            timeLeft = settings.time;
-            totalTime = settings.time;
-            updateDisplay();
-        }
+        let timeLeft = settings.time, totalTime = settings.time, isResting = false, isRunning = false, timer = null, audioUnlocked = false;
+        const aW = document.getElementById('audio-work'), aR = document.getElementById('audio-rest'), aB = document.getElementById('audio-beep');
 
         function updateDisplay() {
             let m = Math.floor(timeLeft / 60), s = timeLeft % 60;
@@ -108,69 +105,54 @@
 
         function toggleTimer() {
             if (!audioUnlocked) {
-                audioW.src = settings.work; 
-                audioR.src = settings.restA;
-                audioB.src = settings.beep;
+                if(settings.work) aW.src = settings.work;
+                if(settings.restA) aR.src = settings.restA;
+                if(settings.beep) aB.src = settings.beep;
                 audioUnlocked = true;
             }
 
             if (isRunning) {
-                clearInterval(timerInterval);
-                isRunning = false;
-                audioW.pause(); audioR.pause(); audioB.pause();
+                clearInterval(timer); isRunning = false;
+                aW.pause(); aR.pause(); aB.pause();
                 document.getElementById('btn-action').innerText = "RETOMAR";
             } else {
                 isRunning = true;
                 document.getElementById('btn-action').innerText = "PAUSAR";
-                if(isResting) audioR.play(); else audioW.play();
+                if(isResting) aR.play(); else aW.play();
 
-                timerInterval = setInterval(() => {
+                timer = setInterval(() => {
                     timeLeft--;
-                    
-                    // GATILHO DOS 7 SEGUNDOS
-                    if (timeLeft === 7) {
-                        audioB.currentTime = 0;
-                        audioB.play().catch(e => console.log("Beep bloqueado ou ausente"));
-                    }
-
+                    // BEEP EXATAMENTE 7s ANTES DO FIM
+                    if (timeLeft === 7) { aB.currentTime = 0; aB.play().catch(e=>console.log("Audio ocupado")); }
                     updateDisplay();
-                    if (timeLeft <= 0) handlePhaseEnd();
+                    if (timeLeft <= 0) nextPhase();
                 }, 1000);
             }
         }
 
-        function handlePhaseEnd() {
-            clearInterval(timerInterval);
-            isRunning = false;
-            audioB.pause();
+        function nextPhase() {
+            clearInterval(timer); isRunning = false;
             isResting = !isResting;
-            
             timeLeft = isResting ? settings.rest : settings.time;
             totalTime = timeLeft;
-            
             document.getElementById('hud').className = isResting ? "hud-container mode-rest" : "hud-container";
-            document.getElementById('status-text').innerText = isResting ? "REGENERANDO" : "COMBATE";
-            
-            toggleTimer(); // Inicia a próxima fase automaticamente
+            document.getElementById('status-txt').innerText = isResting ? "REGENERANDO" : "COMBATE";
+            toggleTimer();
         }
 
-        function skip() {
-            clearInterval(timerInterval);
-            handlePhaseEnd();
-        }
+        function skip() { clearInterval(timer); nextPhase(); }
 
-        // --- SISTEMA DE CONFIG (O QUE ESTAVA QUEBRADO) ---
-        let tempAudios = {};
-        function handleAudioUpload(input, type) {
+        // --- SISTEMA DE ARQUIVOS ---
+        let temp = {};
+        function handleAudio(input, type) {
             const reader = new FileReader();
-            reader.onload = (e) => { tempAudios[type] = e.target.result; alert(type + " carregado na memória!"); };
+            reader.onload = (e) => { temp[type] = e.target.result; alert(type + " pronto!"); };
             reader.readAsDataURL(input.files[0]);
         }
 
         function testBeep() {
-            const src = tempAudios.beep || settings.beep;
-            audioB.src = src;
-            audioB.play();
+            if(temp.beep) aB.src = temp.beep;
+            aB.play();
         }
 
         function openConfig() {
@@ -182,16 +164,15 @@
         function saveConfig() {
             settings.time = parseInt(document.getElementById('cfg-time').value);
             settings.rest = parseInt(document.getElementById('cfg-rest').value);
-            if(tempAudios.beep) settings.beep = tempAudios.beep;
-            if(tempAudios.work) settings.work = tempAudios.work;
-            
-            localStorage.setItem('soldador_cfg', JSON.stringify(settings));
-            location.reload(); // Recarrega para aplicar tudo limpo
+            if(temp.beep) settings.beep = temp.beep;
+            if(temp.work) settings.work = temp.work;
+            localStorage.setItem('soldador_v12_cfg', JSON.stringify(settings));
+            location.reload();
         }
 
         function closeModals() { document.getElementById('modal-config').style.display = 'none'; }
 
-        window.onload = init;
+        window.onload = updateDisplay;
     </script>
 </body>
 </html>
