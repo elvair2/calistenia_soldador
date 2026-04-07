@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HUD do Soldador - V12.2</title>
+    <title>HUD do Soldador - V12.3</title>
     <style>
         :root {
             --bg-color: #0d0d0d; --panel-bg: #1a1a1a; --accent-color: #ff8c00;
@@ -21,7 +21,6 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center;
             position: relative;
         }
-        /* TAG DA VERSÃO NO TOPO */
         .version-tag {
             position: absolute; top: 10px; right: 15px;
             font-size: 0.6rem; color: var(--muted); font-weight: bold;
@@ -40,7 +39,6 @@
         .btn-main { width: 100%; padding: 15px; background: #333; color: #fff; border: 1px solid #555; border-radius: 8px; font-weight: bold; cursor: pointer; text-transform: uppercase; margin-bottom: 10px; }
         #btn-action { background: var(--accent-color); color: #000; border: none; font-size: 1.1rem; }
 
-        /* MODAL DE EDIÇÃO FIXO */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.97); z-index: 1000; flex-direction: column; padding: 30px; box-sizing: border-box; text-align: left; overflow-y: auto; }
         .modal input { width: 100%; background: #222; border: 1px solid #444; color: #fff; padding: 12px; border-radius: 8px; margin: 10px 0 20px 0; }
         .modal label { font-size: 0.8rem; color: var(--accent-color); font-weight: bold; }
@@ -53,9 +51,10 @@
 
     <audio id="audio-work" loop></audio>
     <audio id="audio-rest" loop></audio>
+    <audio id="audio-beep" src="beep.mp3"></audio>
 
     <div class="hud-container" id="hud">
-        <div class="version-tag">V12.2</div>
+        <div class="version-tag">V12.3</div>
         <div class="header">STATUS: <span id="status-text">STANDBY</span></div>
 
         <div class="top-menu">
@@ -79,16 +78,12 @@
 
         <div class="modal" id="modal-config">
             <h2 style="color:var(--accent-color); margin-top:0;">EDITAR MISSÃO</h2>
-            
             <label>TEMPO DE ATAQUE (s)</label>
-            <input type="number" id="cfg-time" value="45">
-            
+            <input type="number" id="cfg-time">
             <label>TEMPO DE DESCANSO (s)</label>
-            <input type="number" id="cfg-rest" value="30">
-
+            <input type="number" id="cfg-rest">
             <label>SÉRIES POR EXERCÍCIO</label>
-            <input type="number" id="cfg-sets" value="3">
-
+            <input type="number" id="cfg-sets">
             <div style="display:flex; gap:10px; margin-top:20px">
                 <button class="btn-main" onclick="saveConfig()" style="background:var(--accent-color); color:#000; border:none;">SALVAR</button>
                 <button class="btn-main" id="close-edit">CANCELAR</button>
@@ -97,13 +92,10 @@
     </div>
 
     <script>
-        // Memória e Configurações
         let settings = { time: 45, rest: 30, sets: 3, musicWork: "ataque.mp3", musicRest: "descanso.mp3" };
         let workoutData = [
-            { title: "A Prancha", img: "1.png" },
-            { title: "Cadeirinha", img: "2.png" },
-            { title: "Superman", img: "3.png" },
-            { title: "Tocha", img: "4.png" }
+            { title: "A Prancha", img: "1.png" }, { title: "Cadeirinha", img: "2.png" },
+            { title: "Superman", img: "3.png" }, { title: "Tocha", img: "4.png" }
         ];
 
         try {
@@ -112,11 +104,9 @@
         } catch(e) {}
 
         let exIndex = 0, currentSet = 1, isResting = false, timeLeft = 0, totalTime = 0, timerInterval = null, isRunning = false, audioUnlocked = false;
-        const audioW = document.getElementById('audio-work'), audioR = document.getElementById('audio-rest');
+        const audioW = document.getElementById('audio-work'), audioR = document.getElementById('audio-rest'), audioB = document.getElementById('audio-beep');
 
-        function init() {
-            loadExercise(0);
-        }
+        function init() { loadExercise(0); }
 
         function loadExercise(index) {
             clearInterval(timerInterval); isRunning = false;
@@ -150,14 +140,22 @@
             }
             if (isRunning) {
                 clearInterval(timerInterval); isRunning = false;
-                audioW.pause(); audioR.pause();
+                audioW.pause(); audioR.pause(); audioB.pause();
                 document.getElementById('btn-action').innerText = "RETOMAR";
             } else {
                 isRunning = true;
                 document.getElementById('btn-action').innerText = "PAUSAR";
                 if(isResting) audioR.play().catch(()=>{}); else audioW.play().catch(()=>{});
+                
                 timerInterval = setInterval(() => {
                     timeLeft--;
+                    
+                    // GATILHO SINCRONIZADO: 7 segundos antes de acabar
+                    if (timeLeft === 7) {
+                        audioB.currentTime = 0;
+                        audioB.play().catch(()=>{});
+                    }
+
                     updateDisplay();
                     if(timeLeft <= 0) handleEnd();
                 }, 1000);
@@ -166,7 +164,11 @@
 
         function handleEnd() {
             clearInterval(timerInterval); isRunning = false;
-            audioW.pause(); audioR.pause();
+            // PARADA TOTAL DE ÁUDIO NO FIM DA FASE
+            audioW.pause(); audioW.currentTime = 0;
+            audioR.pause(); audioR.currentTime = 0;
+            audioB.pause(); audioB.currentTime = 0;
+
             if (!isResting) {
                 if (currentSet >= settings.sets) {
                     exIndex++; if (exIndex >= workoutData.length) finish(); else loadExercise(exIndex);
@@ -176,14 +178,13 @@
 
         function skip() { 
             clearInterval(timerInterval); 
-            audioW.pause(); audioR.pause();
+            audioW.pause(); audioR.pause(); audioB.pause();
             exIndex++; 
             if (exIndex >= workoutData.length) finish(); else loadExercise(exIndex); 
         }
 
         function finish() { alert("MISSÃO CUMPRIDA!"); loadExercise(0); }
 
-        // --- SISTEMA DE EDIÇÃO FIXO ---
         document.getElementById('open-edit').onclick = function() {
             document.getElementById('cfg-time').value = settings.time;
             document.getElementById('cfg-rest').value = settings.rest;
