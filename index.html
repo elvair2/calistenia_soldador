@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HUD do Soldador - v12.9</title>
+    <title>HUD do Soldador - v13.0</title>
     <style>
         :root {
             --bg-color: #0d0d0d; --panel-bg: #1a1a1a; --accent-color: #ff8c00;
@@ -49,16 +49,13 @@
         .mode-rest .timer { color: var(--rest-color); }
         .mode-rest .bar-fill { background: var(--rest-color); }
         
-        /* Estilo da Contagem de Preparação */
         .prep-mode .timer { color: #fff; text-shadow: 0 0 10px #fff; }
     </style>
 </head>
 <body>
 
-    <audio id="audio-beep" src="beep.mp3" preload="auto"></audio>
-
     <div class="hud-container" id="hud">
-        <div class="version-tag">v12.9</div>
+        <div class="version-tag">v13.0</div>
         <div class="header">STATUS: <span id="status-text">STANDBY</span></div>
 
         <div class="top-menu">
@@ -110,8 +107,31 @@
         } catch(e) {}
 
         let exIndex = 0, currentSet = 1, isResting = false, timeLeft = 0, totalTime = 0, timerInterval = null, isRunning = false;
-        let sessionTimeCounter = 0, wakeLock = null, audioUnlocked = false, isPreparing = false;
-        const audioB = document.getElementById('audio-beep');
+        let sessionTimeCounter = 0, wakeLock = null, isPreparing = false;
+
+        // SISTEMA WEB AUDIO API (NOVO) - Resolve conflito com YouTube Music no iOS
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+        let beepBuffer = null;
+
+        async function setupWebAudio() {
+            if (audioCtx) return;
+            audioCtx = new AudioContext();
+            try {
+                const response = await fetch('beep.mp3');
+                const arrayBuffer = await response.arrayBuffer();
+                beepBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+            } catch (e) { console.error("Erro ao carregar beep.mp3:", e); }
+        }
+
+        function playBeep() {
+            if (!audioCtx || !beepBuffer) return;
+            // Cria um som "fantasma" que não interrompe música de fundo
+            const source = audioCtx.createBufferSource();
+            source.buffer = beepBuffer;
+            source.connect(audioCtx.destination);
+            source.start(0);
+        }
 
         async function requestWakeLock() {
             if ('wakeLock' in navigator) {
@@ -140,7 +160,7 @@
             totalTime = timeLeft;
             document.getElementById('set-display').innerText = `${currentSet} / ${settings.sets}`;
             document.getElementById('status-text').innerText = isResting ? "REGENERANDO" : "COMBATE";
-            document.getElementById('hud').className = isResting ? "hud-container mode-rest" : "hud-container";
+            document.getElementById('hud').className = isResting ? "hud-container mode-rest";
             updateDisplay();
         }
 
@@ -155,20 +175,16 @@
             }
         }
 
-        function toggleTimer() {
-            if (!audioUnlocked) {
-                // Destrava áudio discretamente para não matar o YouTube Music no iOS
-                audioB.muted = true;
-                audioB.play().then(() => { audioB.pause(); audioB.muted = false; });
-                audioUnlocked = true;
-            }
+        async function toggleTimer() {
+            // Ativa o motor de áudio no primeiro clique (exigência do iOS)
+            if (!audioCtx) await setupWebAudio();
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
 
             if (isRunning) {
                 clearInterval(timerInterval); isRunning = false; isPreparing = false;
                 document.getElementById('btn-action').innerText = "RETOMAR";
                 releaseWakeLock();
             } else {
-                // CONTAGEM REGRESSIVA DE 5s NO INÍCIO DO EXERCÍCIO
                 if (currentSet === 1 && !isResting && timeLeft === settings.time && !isPreparing) {
                     isPreparing = true;
                     timeLeft = 5;
@@ -207,10 +223,9 @@
                 timeLeft--;
                 if (!isResting) sessionTimeCounter++;
                 
-                // BEEP AOS 6 SEGUNDOS (ATRASADO EM 2s)
+                // GATILHO BEEP: 6 SEGUNDOS ANTES DO FIM (ATRASADO 2S)
                 if (timeLeft === 6) {
-                    audioB.currentTime = 0;
-                    audioB.play().catch(e => {}); 
+                    playBeep(); 
                 }
 
                 updateDisplay();
@@ -220,7 +235,7 @@
 
         function handleEnd() {
             clearInterval(timerInterval);
-            audioB.pause(); audioB.currentTime = 0;
+            isRunning = false;
 
             if (!isResting) {
                 if (currentSet >= settings.sets) {
@@ -240,13 +255,10 @@
             releaseWakeLock();
             const today = new Date();
             const dateStr = today.toLocaleDateString('pt-BR');
-            const totalMin = Math.floor(sessionTimeCounter / 60);
-            const timeStr = `${totalMin}m ${sessionTimeCounter % 60}s`;
-
+            const timeStr = `${Math.floor(sessionTimeCounter / 60)}m ${sessionTimeCounter % 60}s`;
             let history = JSON.parse(localStorage.getItem('soldador_history') || "[]");
             history.unshift({ date: dateStr, time: timeStr });
             localStorage.setItem('soldador_history', JSON.stringify(history));
-
             sessionTimeCounter = 0;
             alert("MISSÃO CUMPRIDA! RELATÓRIO SALVO.");
             loadExercise(0);
