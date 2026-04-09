@@ -3,20 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HUD do Soldador - v13.0</title>
+    <title>HUD do Soldador - v13.1</title>
     <style>
         :root {
-            --bg-color: #0d0d0d; --panel-bg: #1a1a1a; --accent-color: #ff8c00;
-            --rest-color: #00e5ff; --text-color: #f0f0f0; --muted: #666;
+            --bg: #0d0d0d; --panel: #1a1a1a; --accent: #ff8c00;
+            --rest: #00e5ff; --txt: #f0f0f0; --muted: #555;
         }
         body {
-            background-color: var(--bg-color); color: var(--text-color);
+            background-color: var(--bg); color: var(--txt);
             font-family: 'Segoe UI', sans-serif; display: flex; 
             justify-content: center; align-items: center; min-height: 100vh; margin: 0;
             user-select: none; touch-action: manipulation;
         }
         .hud-container {
-            background: var(--panel-bg); width: 90%; max-width: 380px;
+            background: var(--panel); width: 90%; max-width: 380px;
             padding: 25px; border-radius: 15px; border: 1px solid #333;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center;
             position: relative;
@@ -25,37 +25,36 @@
             position: absolute; top: 10px; right: 15px;
             font-size: 0.6rem; color: var(--muted); font-weight: bold;
         }
-        .header { font-size: 0.75rem; color: var(--accent-color); font-weight: bold; letter-spacing: 2px; margin-bottom: 20px; }
+        .header { font-size: 0.75rem; color: var(--accent); font-weight: bold; letter-spacing: 2px; margin-bottom: 20px; }
         .top-menu { display: flex; justify-content: space-between; margin-bottom: 15px; gap: 5px; }
         .mini-btn { flex: 1; background: #252525; border: 1px solid #444; color: #fff; padding: 6px 2px; border-radius: 5px; cursor: pointer; font-size: 0.65rem; }
         
         .image-container { width: 100%; height: 180px; background-color: #222; border-radius: 10px; margin-bottom: 15px; overflow: hidden; border: 2px solid #333; display: flex; justify-content: center; align-items: center; }
         img { width: 100%; height: 100%; object-fit: cover; }
 
-        .timer { font-size: 4.5rem; font-weight: bold; color: var(--accent-color); font-family: 'Courier New', monospace; margin: 10px 0; }
+        .timer { font-size: 4.5rem; font-weight: bold; color: var(--accent); font-family: 'Courier New', monospace; margin: 10px 0; }
         .bar-bg { width: 100%; height: 10px; background: #111; border-radius: 5px; overflow: hidden; margin-bottom: 25px; border: 1px solid #333; }
-        .bar-fill { height: 100%; width: 0%; background: var(--accent-color); transition: width 1s linear; }
+        .bar-fill { height: 100%; width: 0%; background: var(--accent); transition: width 1s linear; }
         
         .btn-main { width: 100%; padding: 15px; background: #333; color: #fff; border: 1px solid #555; border-radius: 8px; font-weight: bold; cursor: pointer; text-transform: uppercase; margin-bottom: 10px; }
-        #btn-action { background: var(--accent-color); color: #000; border: none; font-size: 1.1rem; }
+        #btn-action { background: var(--accent); color: #000; border: none; font-size: 1.1rem; }
 
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.97); z-index: 1000; flex-direction: column; padding: 30px; box-sizing: border-box; text-align: left; overflow-y: auto; }
         .modal input { width: 100%; background: #222; border: 1px solid #444; color: #fff; padding: 12px; border-radius: 8px; margin: 10px 0 20px 0; }
-        .modal label { font-size: 0.8rem; color: var(--accent-color); font-weight: bold; }
+        .modal label { font-size: 0.8rem; color: var(--accent); font-weight: bold; }
 
-        .log-item { background: #222; padding: 10px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid var(--accent-color); font-size: 0.85rem; }
-        .log-date { color: var(--accent-color); font-weight: bold; }
+        .log-item { background: #222; padding: 10px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid var(--accent); font-size: 0.85rem; }
+        .log-date { color: var(--accent); font-weight: bold; }
 
-        .mode-rest .timer { color: var(--rest-color); }
-        .mode-rest .bar-fill { background: var(--rest-color); }
-        
-        .prep-mode .timer { color: #fff; text-shadow: 0 0 10px #fff; }
+        .mode-rest .timer { color: var(--rest); }
+        .mode-rest .bar-fill { background: var(--rest); }
+        .prep-mode .timer { color: #fff; }
     </style>
 </head>
 <body>
 
     <div class="hud-container" id="hud">
-        <div class="version-tag">v13.0</div>
+        <div class="version-tag">v13.1</div>
         <div class="header">STATUS: <span id="status-text">STANDBY</span></div>
 
         <div class="top-menu">
@@ -79,27 +78,24 @@
         <button class="btn-main" onclick="skip()">PULAR</button>
 
         <div class="modal" id="modal-log">
-            <h2 style="color:var(--accent-color); margin-top:0;">HISTÓRICO</h2>
+            <h2 style="color:var(--accent); margin-top:0;">HISTÓRICO</h2>
             <div id="log-content">Vazio.</div>
             <button class="btn-main" id="close-log" style="margin-top:20px">FECHAR</button>
         </div>
 
         <div class="modal" id="modal-config">
-            <h2 style="color:var(--accent-color); margin-top:0;">EDITAR</h2>
+            <h2 style="color:var(--accent); margin-top:0;">EDITAR</h2>
             <label>ATAQUE (s)</label><input type="number" id="cfg-time">
             <label>DESCANSO (s)</label><input type="number" id="cfg-rest">
             <label>SÉRIES</label><input type="number" id="cfg-sets">
-            <button class="btn-main" onclick="saveConfig()" style="background:var(--accent-color); color:#000;">SALVAR</button>
+            <button class="btn-main" onclick="saveConfig()" style="background:var(--accent); color:#000;">SALVAR</button>
             <button class="btn-main" id="close-edit">CANCELAR</button>
         </div>
     </div>
 
     <script>
         let settings = { time: 45, rest: 30, sets: 3 };
-        let workoutData = [
-            { title: "A Prancha", img: "1.png" }, { title: "Cadeirinha", img: "2.png" },
-            { title: "Superman", img: "3.png" }, { title: "Tocha", img: "4.png" }
-        ];
+        let workoutData = [{ title: "A Prancha", img: "1.png" }, { title: "Cadeirinha", img: "2.png" }, { title: "Superman", img: "3.png" }, { title: "Tocha", img: "4.png" }];
 
         try {
             const saved = localStorage.getItem('soldador_cfg');
@@ -107,40 +103,49 @@
         } catch(e) {}
 
         let exIndex = 0, currentSet = 1, isResting = false, timeLeft = 0, totalTime = 0, timerInterval = null, isRunning = false;
-        let sessionTimeCounter = 0, wakeLock = null, isPreparing = false;
+        let sessionTimeCounter = 0, wakeLock = null, isPreparing = false, audioUnlocked = false;
 
-        // SISTEMA WEB AUDIO API (NOVO) - Resolve conflito com YouTube Music no iOS
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        // MOTOR DE ÁUDIO "iOS FRIENDLY"
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
         let audioCtx = null;
         let beepBuffer = null;
 
-        async function setupWebAudio() {
+        async function unlockAudio() {
             if (audioCtx) return;
-            audioCtx = new AudioContext();
+            audioCtx = new AudioCtx();
             try {
-                const response = await fetch('beep.mp3');
-                const arrayBuffer = await response.arrayBuffer();
-                beepBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-            } catch (e) { console.error("Erro ao carregar beep.mp3:", e); }
+                const resp = await fetch('beep.mp3');
+                const arrayBuf = await resp.arrayBuffer();
+                beepBuffer = await audioCtx.decodeAudioData(arrayBuf);
+            } catch (e) { console.log("Usando bipes sintéticos (beep.mp3 não encontrado)"); }
         }
 
         function playBeep() {
-            if (!audioCtx || !beepBuffer) return;
-            // Cria um som "fantasma" que não interrompe música de fundo
-            const source = audioCtx.createBufferSource();
-            source.buffer = beepBuffer;
-            source.connect(audioCtx.destination);
-            source.start(0);
+            if (!audioCtx) return;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            if (beepBuffer) {
+                const source = audioCtx.createBufferSource();
+                source.buffer = beepBuffer;
+                source.connect(audioCtx.destination);
+                source.start(0);
+            } else {
+                // BIP SINTÉTICO SE O MP3 FALHAR (PARA NÃO TRAVAR O APP)
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = 880;
+                gain.gain.value = 0.1;
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.2);
+            }
         }
 
         async function requestWakeLock() {
             if ('wakeLock' in navigator) {
                 try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
             }
-        }
-
-        function releaseWakeLock() {
-            if (wakeLock !== null) { wakeLock.release(); wakeLock = null; }
         }
 
         function init() { loadExercise(0); }
@@ -160,7 +165,7 @@
             totalTime = timeLeft;
             document.getElementById('set-display').innerText = `${currentSet} / ${settings.sets}`;
             document.getElementById('status-text').innerText = isResting ? "REGENERANDO" : "COMBATE";
-            document.getElementById('hud').className = isResting ? "hud-container mode-rest";
+            document.getElementById('hud').className = isResting ? "hud-container mode-rest" : "hud-container";
             updateDisplay();
         }
 
@@ -176,38 +181,39 @@
         }
 
         async function toggleTimer() {
-            // Ativa o motor de áudio no primeiro clique (exigência do iOS)
-            if (!audioCtx) await setupWebAudio();
-            if (audioCtx.state === 'suspended') await audioCtx.resume();
+            if (!audioUnlocked) { await unlockAudio(); audioUnlocked = true; }
 
             if (isRunning) {
                 clearInterval(timerInterval); isRunning = false; isPreparing = false;
                 document.getElementById('btn-action').innerText = "RETOMAR";
-                releaseWakeLock();
+                if (wakeLock) { wakeLock.release(); wakeLock = null; }
             } else {
                 if (currentSet === 1 && !isResting && timeLeft === settings.time && !isPreparing) {
-                    isPreparing = true;
-                    timeLeft = 5;
-                    document.getElementById('status-text').innerText = "PREPARAR!";
-                    document.getElementById('hud').classList.add('prep-mode');
-                    document.getElementById('btn-action').innerText = "PAUSAR";
-                    isRunning = true;
-                    requestWakeLock();
-                    
-                    timerInterval = setInterval(() => {
-                        timeLeft--;
-                        updateDisplay();
-                        if (timeLeft <= 0) {
-                            clearInterval(timerInterval);
-                            isPreparing = false;
-                            document.getElementById('hud').classList.remove('prep-mode');
-                            startCombat();
-                        }
-                    }, 1000);
+                    startPreparation();
                 } else {
                     startCombat();
                 }
             }
+        }
+
+        function startPreparation() {
+            isPreparing = true;
+            timeLeft = 5;
+            document.getElementById('status-text').innerText = "PREPARAR!";
+            document.getElementById('hud').classList.add('prep-mode');
+            document.getElementById('btn-action').innerText = "PAUSAR";
+            isRunning = true;
+            requestWakeLock();
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateDisplay();
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    isPreparing = false;
+                    document.getElementById('hud').classList.remove('prep-mode');
+                    startCombat();
+                }
+            }, 1000);
         }
 
         function startCombat() {
@@ -215,19 +221,13 @@
             requestWakeLock();
             if (timeLeft <= 0) timeLeft = isResting ? settings.rest : settings.time;
             totalTime = isResting ? settings.rest : settings.time;
-            
             document.getElementById('status-text').innerText = isResting ? "REGENERANDO" : "COMBATE";
             document.getElementById('btn-action').innerText = "PAUSAR";
             
             timerInterval = setInterval(() => {
                 timeLeft--;
                 if (!isResting) sessionTimeCounter++;
-                
-                // GATILHO BEEP: 6 SEGUNDOS ANTES DO FIM (ATRASADO 2S)
-                if (timeLeft === 6) {
-                    playBeep(); 
-                }
-
+                if (timeLeft === 6) playBeep(); // BEEP 6s ANTES
                 updateDisplay();
                 if(timeLeft <= 0) handleEnd();
             }, 1000);
@@ -236,7 +236,6 @@
         function handleEnd() {
             clearInterval(timerInterval);
             isRunning = false;
-
             if (!isResting) {
                 if (currentSet >= settings.sets) {
                     exIndex++; 
@@ -245,22 +244,16 @@
             } else { isResting = false; currentSet++; setupPhase(); startCombat(); }
         }
 
-        function skip() { 
-            clearInterval(timerInterval); 
-            exIndex++; 
-            if (exIndex >= workoutData.length) finish(); else loadExercise(exIndex); 
-        }
+        function skip() { exIndex++; if (exIndex >= workoutData.length) finish(); else loadExercise(exIndex); }
 
         function finish() {
-            releaseWakeLock();
-            const today = new Date();
-            const dateStr = today.toLocaleDateString('pt-BR');
+            const today = new Date().toLocaleDateString('pt-BR');
             const timeStr = `${Math.floor(sessionTimeCounter / 60)}m ${sessionTimeCounter % 60}s`;
             let history = JSON.parse(localStorage.getItem('soldador_history') || "[]");
-            history.unshift({ date: dateStr, time: timeStr });
+            history.unshift({ date: today, time: timeStr });
             localStorage.setItem('soldador_history', JSON.stringify(history));
             sessionTimeCounter = 0;
-            alert("MISSÃO CUMPRIDA! RELATÓRIO SALVO.");
+            alert("MISSÃO CUMPRIDA!");
             loadExercise(0);
         }
 
@@ -270,15 +263,11 @@
             document.getElementById('cfg-sets').value = settings.sets;
             document.getElementById('modal-config').style.display = 'flex';
         };
-
         document.getElementById('open-log').onclick = () => {
             const history = JSON.parse(localStorage.getItem('soldador_history') || "[]");
-            document.getElementById('log-content').innerHTML = history.length === 0 ? "Vazio." : history.map(item => `
-                <div class="log-item"><span class="log-date">${item.date}</span>: <b>${item.time}</b></div>
-            `).join('');
+            document.getElementById('log-content').innerHTML = history.length === 0 ? "Vazio." : history.map(item => `<div class="log-item"><b>${item.date}</b>: ${item.time}</div>`).join('');
             document.getElementById('modal-log').style.display = 'flex';
         };
-
         document.getElementById('close-edit').onclick = () => document.getElementById('modal-config').style.display = 'none';
         document.getElementById('close-log').onclick = () => document.getElementById('modal-log').style.display = 'none';
 
@@ -289,7 +278,6 @@
             localStorage.setItem('soldador_cfg', JSON.stringify(settings));
             location.reload();
         }
-
         window.onload = init;
     </script>
 </body>
