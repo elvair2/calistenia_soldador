@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HUD do Soldador - V12.7</title>
+    <title>HUD do Soldador - v12.7</title>
     <style>
         :root {
             --bg-color: #0d0d0d; --panel-bg: #1a1a1a; --accent-color: #ff8c00;
@@ -48,6 +48,9 @@
 
         .mode-rest .timer { color: var(--rest-color); }
         .mode-rest .bar-fill { background: var(--rest-color); }
+
+        /* Estilo da Contagem de Preparação */
+        .countdown-overlay { font-size: 5rem; color: #fff; text-shadow: 0 0 20px var(--accent-color); }
     </style>
 </head>
 <body>
@@ -55,7 +58,7 @@
     <audio id="audio-beep" src="beep.mp3"></audio>
 
     <div class="hud-container" id="hud">
-        <div class="version-tag">V12.7</div>
+        <div class="version-tag">v12.7</div>
         <div class="header">STATUS: <span id="status-text">STANDBY</span></div>
 
         <div class="top-menu">
@@ -113,8 +116,7 @@
         } catch(e) {}
 
         let exIndex = 0, currentSet = 1, isResting = false, timeLeft = 0, totalTime = 0, timerInterval = null, isRunning = false, audioUnlocked = false;
-        let sessionTimeCounter = 0;
-        let wakeLock = null;
+        let sessionTimeCounter = 0, wakeLock = null, isPreparing = false;
         const audioB = document.getElementById('audio-beep');
 
         async function requestWakeLock() {
@@ -130,7 +132,7 @@
         function init() { loadExercise(0); }
 
         function loadExercise(index) {
-            clearInterval(timerInterval); isRunning = false;
+            clearInterval(timerInterval); isRunning = false; isPreparing = false;
             exIndex = index; currentSet = 1; isResting = false;
             const ex = workoutData[index];
             document.getElementById('ex-img').src = ex.img;
@@ -144,14 +146,14 @@
             totalTime = timeLeft;
             document.getElementById('set-display').innerText = `${currentSet} / ${settings.sets}`;
             document.getElementById('status-text').innerText = isResting ? "REGENERANDO" : "COMBATE";
-            document.getElementById('hud').className = isResting ? "hud-container mode-rest" : "hud-container";
+            document.getElementById('hud').className = isResting ? "hud-container mode-rest";
             updateDisplay();
         }
 
         function updateDisplay() {
             let m = Math.floor(timeLeft / 60), s = timeLeft % 60;
-            document.getElementById('timer-display').innerText = `${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`;
-            document.getElementById('p-bar').style.width = `${((totalTime - timeLeft) / totalTime) * 100}%`;
+            document.getElementById('timer-display').innerText = isPreparing ? timeLeft : `${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`;
+            document.getElementById('p-bar').style.width = isPreparing ? "0%" : `${((totalTime - timeLeft) / totalTime) * 100}%`;
         }
 
         function toggleTimer() {
@@ -161,29 +163,62 @@
             }
 
             if (isRunning) {
-                clearInterval(timerInterval); isRunning = false;
+                clearInterval(timerInterval); isRunning = false; isPreparing = false;
                 audioB.pause();
                 document.getElementById('btn-action').innerText = "RETOMAR";
                 releaseWakeLock();
             } else {
-                isRunning = true;
-                requestWakeLock();
-                document.getElementById('btn-action').innerText = "PAUSAR";
-                
-                timerInterval = setInterval(() => {
-                    timeLeft--;
-                    sessionTimeCounter++;
-                    
-                    // GATILHO BEEP AJUSTADO: 5 SEGUNDOS ANTES DO FIM
-                    if (timeLeft === 5) {
-                        audioB.currentTime = 0;
-                        audioB.play().catch(e => console.log("Beep bloqueado"));
-                    }
-
-                    updateDisplay();
-                    if(timeLeft <= 0) handleEnd();
-                }, 1000);
+                // Se for a primeira série e não estiver descansando, inicia preparação de 5s
+                if (currentSet === 1 && !isResting && timeLeft === settings.time && !isPreparing) {
+                    startPreparation();
+                } else {
+                    startLogic();
+                }
             }
+        }
+
+        function startPreparation() {
+            isPreparing = true;
+            timeLeft = 5;
+            document.getElementById('status-text').innerText = "PREPARAR!";
+            document.getElementById('btn-action').innerText = "PAUSAR";
+            isRunning = true;
+            requestWakeLock();
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateDisplay();
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    isPreparing = false;
+                    startLogic();
+                }
+            }, 1000);
+        }
+
+        function startLogic() {
+            isRunning = true;
+            isPreparing = false;
+            requestWakeLock();
+            if (timeLeft <= 0 || timeLeft === 5) timeLeft = isResting ? settings.rest : settings.time;
+            totalTime = isResting ? settings.rest : settings.time;
+            
+            document.getElementById('status-text').innerText = isResting ? "REGENERANDO" : "COMBATE";
+            document.getElementById('btn-action').innerText = "PAUSAR";
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                if (!isPreparing) sessionTimeCounter++;
+                
+                // BEEP ATRASADO EM 2s -> Toca faltando 6 segundos (8-2=6)
+                if (timeLeft === 6) {
+                    audioB.currentTime = 0;
+                    audioB.play().catch(e => console.log("Beep bloqueado"));
+                }
+
+                updateDisplay();
+                if(timeLeft <= 0) handleEnd();
+            }, 1000);
         }
 
         function handleEnd() {
@@ -194,8 +229,8 @@
                 if (currentSet >= settings.sets) {
                     exIndex++; 
                     if (exIndex >= workoutData.length) finish(); else loadExercise(exIndex);
-                } else { isResting = true; setupPhase(); toggleTimer(); }
-            } else { isResting = false; currentSet++; setupPhase(); toggleTimer(); }
+                } else { isResting = true; setupPhase(); startLogic(); }
+            } else { isResting = false; currentSet++; setupPhase(); startLogic(); }
         }
 
         function skip() { 
@@ -232,20 +267,16 @@
         document.getElementById('open-log').onclick = () => {
             const history = JSON.parse(localStorage.getItem('soldador_history') || "[]");
             const logDiv = document.getElementById('log-content');
-            if (history.length === 0) {
-                logDiv.innerHTML = "Nenhuma missão concluída ainda.";
-            } else {
-                logDiv.innerHTML = history.map(item => `
-                    <div class="log-item">
-                        <span class="log-date">${item.date}</span>: Concluído em <b>${item.time}</b>
-                    </div>
-                `).join('');
-            }
+            logDiv.innerHTML = history.length === 0 ? "Nenhuma missão concluída." : history.map(item => `
+                <div class="log-item">
+                    <span class="log-date">${item.date}</span>: Concluído em <b>${item.time}</b>
+                </div>
+            `).join('');
             document.getElementById('modal-log').style.display = 'flex';
         };
 
         function clearLogs() {
-            if(confirm("Deseja apagar todo o histórico?")) {
+            if(confirm("Apagar histórico?")) {
                 localStorage.removeItem('soldador_history');
                 document.getElementById('open-log').click();
             }
