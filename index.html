@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HUD do Soldador - v12.7</title>
+    <title>HUD do Soldador - v12.8</title>
     <style>
         :root {
             --bg-color: #0d0d0d; --panel-bg: #1a1a1a; --accent-color: #ff8c00;
@@ -48,9 +48,6 @@
 
         .mode-rest .timer { color: var(--rest-color); }
         .mode-rest .bar-fill { background: var(--rest-color); }
-
-        /* Estilo da Contagem de Preparação */
-        .countdown-overlay { font-size: 5rem; color: #fff; text-shadow: 0 0 20px var(--accent-color); }
     </style>
 </head>
 <body>
@@ -58,7 +55,7 @@
     <audio id="audio-beep" src="beep.mp3"></audio>
 
     <div class="hud-container" id="hud">
-        <div class="version-tag">v12.7</div>
+        <div class="version-tag">v12.8</div>
         <div class="header">STATUS: <span id="status-text">STANDBY</span></div>
 
         <div class="top-menu">
@@ -82,24 +79,18 @@
         <button class="btn-main" onclick="skip()">PULAR</button>
 
         <div class="modal" id="modal-log">
-            <h2 style="color:var(--accent-color); margin-top:0;">HISTÓRICO DE MISSÃO</h2>
-            <div id="log-content">Nenhuma missão concluída ainda.</div>
+            <h2 style="color:var(--accent-color); margin-top:0;">HISTÓRICO</h2>
+            <div id="log-content">Vazio.</div>
             <button class="btn-main" id="close-log" style="margin-top:20px">FECHAR</button>
-            <button class="mini-btn" onclick="clearLogs()" style="background:#400; width:100%">LIMPAR TUDO</button>
         </div>
 
         <div class="modal" id="modal-config">
-            <h2 style="color:var(--accent-color); margin-top:0;">EDITAR MISSÃO</h2>
-            <label>TEMPO DE ATAQUE (s)</label>
-            <input type="number" id="cfg-time">
-            <label>TEMPO DE DESCANSO (s)</label>
-            <input type="number" id="cfg-rest">
-            <label>SÉRIES POR EXERCÍCIO</label>
-            <input type="number" id="cfg-sets">
-            <div style="display:flex; gap:10px; margin-top:20px">
-                <button class="btn-main" onclick="saveConfig()" style="background:var(--accent-color); color:#000; border:none;">SALVAR</button>
-                <button class="btn-main" id="close-edit">CANCELAR</button>
-            </div>
+            <h2 style="color:var(--accent-color); margin-top:0;">EDITAR</h2>
+            <label>ATAQUE (s)</label><input type="number" id="cfg-time">
+            <label>DESCANSO (s)</label><input type="number" id="cfg-rest">
+            <label>SÉRIES</label><input type="number" id="cfg-sets">
+            <button class="btn-main" onclick="saveConfig()" style="background:var(--accent-color); color:#000;">SALVAR</button>
+            <button class="btn-main" id="close-edit">CANCELAR</button>
         </div>
     </div>
 
@@ -115,8 +106,8 @@
             if(saved) settings = JSON.parse(saved);
         } catch(e) {}
 
-        let exIndex = 0, currentSet = 1, isResting = false, timeLeft = 0, totalTime = 0, timerInterval = null, isRunning = false, audioUnlocked = false;
-        let sessionTimeCounter = 0, wakeLock = null, isPreparing = false;
+        let exIndex = 0, currentSet = 1, isResting = false, timeLeft = 0, totalTime = 0, timerInterval = null, isRunning = false;
+        let sessionTimeCounter = 0, wakeLock = null, audioUnlocked = false, isPreparing = false;
         const audioB = document.getElementById('audio-beep');
 
         async function requestWakeLock() {
@@ -146,7 +137,7 @@
             totalTime = timeLeft;
             document.getElementById('set-display').innerText = `${currentSet} / ${settings.sets}`;
             document.getElementById('status-text').innerText = isResting ? "REGENERANDO" : "COMBATE";
-            document.getElementById('hud').className = isResting ? "hud-container mode-rest";
+            document.getElementById('hud').className = isResting ? "hud-container mode-rest" : "hud-container";
             updateDisplay();
         }
 
@@ -163,12 +154,10 @@
             }
 
             if (isRunning) {
-                clearInterval(timerInterval); isRunning = false; isPreparing = false;
-                audioB.pause();
+                clearInterval(timerInterval); isRunning = false;
                 document.getElementById('btn-action').innerText = "RETOMAR";
                 releaseWakeLock();
             } else {
-                // Se for a primeira série e não estiver descansando, inicia preparação de 5s
                 if (currentSet === 1 && !isResting && timeLeft === settings.time && !isPreparing) {
                     startPreparation();
                 } else {
@@ -200,7 +189,11 @@
             isRunning = true;
             isPreparing = false;
             requestWakeLock();
-            if (timeLeft <= 0 || timeLeft === 5) timeLeft = isResting ? settings.rest : settings.time;
+            
+            // Corrige tempo se necessário ao sair da preparação ou resetar
+            if (timeLeft <= 0) {
+                timeLeft = isResting ? settings.rest : settings.time;
+            }
             totalTime = isResting ? settings.rest : settings.time;
             
             document.getElementById('status-text').innerText = isResting ? "REGENERANDO" : "COMBATE";
@@ -208,12 +201,12 @@
             
             timerInterval = setInterval(() => {
                 timeLeft--;
-                if (!isPreparing) sessionTimeCounter++;
+                if (!isResting && !isPreparing) sessionTimeCounter++;
                 
-                // BEEP ATRASADO EM 2s -> Toca faltando 6 segundos (8-2=6)
+                // BEEP AOS 6 SEGUNDOS
                 if (timeLeft === 6) {
                     audioB.currentTime = 0;
-                    audioB.play().catch(e => console.log("Beep bloqueado"));
+                    audioB.play().catch(e => {});
                 }
 
                 updateDisplay();
@@ -222,7 +215,7 @@
         }
 
         function handleEnd() {
-            clearInterval(timerInterval); isRunning = false;
+            clearInterval(timerInterval);
             audioB.pause(); audioB.currentTime = 0;
 
             if (!isResting) {
@@ -235,7 +228,6 @@
 
         function skip() { 
             clearInterval(timerInterval); 
-            audioB.pause(); audioB.currentTime = 0;
             exIndex++; 
             if (exIndex >= workoutData.length) finish(); else loadExercise(exIndex); 
         }
@@ -244,12 +236,12 @@
             releaseWakeLock();
             const today = new Date();
             const dateStr = today.toLocaleDateString('pt-BR');
-            const minutesTotal = Math.floor(sessionTimeCounter / 60);
-            const secondsTotal = sessionTimeCounter % 60;
-            const timeFormatted = `${minutesTotal}m ${secondsTotal}s`;
+            const totalMin = Math.floor(sessionTimeCounter / 60);
+            const totalSec = sessionTimeCounter % 60;
+            const timeStr = `${totalMin}m ${totalSec}s`;
 
             let history = JSON.parse(localStorage.getItem('soldador_history') || "[]");
-            history.unshift({ date: dateStr, time: timeFormatted });
+            history.unshift({ date: dateStr, time: timeStr });
             localStorage.setItem('soldador_history', JSON.stringify(history));
 
             sessionTimeCounter = 0;
@@ -266,21 +258,11 @@
 
         document.getElementById('open-log').onclick = () => {
             const history = JSON.parse(localStorage.getItem('soldador_history') || "[]");
-            const logDiv = document.getElementById('log-content');
-            logDiv.innerHTML = history.length === 0 ? "Nenhuma missão concluída." : history.map(item => `
-                <div class="log-item">
-                    <span class="log-date">${item.date}</span>: Concluído em <b>${item.time}</b>
-                </div>
+            document.getElementById('log-content').innerHTML = history.length === 0 ? "Vazio." : history.map(item => `
+                <div class="log-item"><span class="log-date">${item.date}</span>: <b>${item.time}</b></div>
             `).join('');
             document.getElementById('modal-log').style.display = 'flex';
         };
-
-        function clearLogs() {
-            if(confirm("Apagar histórico?")) {
-                localStorage.removeItem('soldador_history');
-                document.getElementById('open-log').click();
-            }
-        }
 
         document.getElementById('close-edit').onclick = () => document.getElementById('modal-config').style.display = 'none';
         document.getElementById('close-log').onclick = () => document.getElementById('modal-log').style.display = 'none';
