@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HUD do Soldador - V12.6</title>
+    <title>HUD do Soldador - V12.7</title>
     <style>
         :root {
             --bg-color: #0d0d0d; --panel-bg: #1a1a1a; --accent-color: #ff8c00;
@@ -55,7 +55,7 @@
     <audio id="audio-beep" src="beep.mp3"></audio>
 
     <div class="hud-container" id="hud">
-        <div class="version-tag">V12.6</div>
+        <div class="version-tag">V12.7</div>
         <div class="header">STATUS: <span id="status-text">STANDBY</span></div>
 
         <div class="top-menu">
@@ -113,7 +113,7 @@
         } catch(e) {}
 
         let exIndex = 0, currentSet = 1, isResting = false, timeLeft = 0, totalTime = 0, timerInterval = null, isRunning = false, audioUnlocked = false;
-        let sessionTimeCounter = 0; // Contador de tempo total
+        let sessionTimeCounter = 0;
         let wakeLock = null;
         const audioB = document.getElementById('audio-beep');
 
@@ -172,10 +172,10 @@
                 
                 timerInterval = setInterval(() => {
                     timeLeft--;
-                    sessionTimeCounter++; // Soma ao tempo total da sessão
+                    sessionTimeCounter++;
                     
-                    // GATILHO BEEP: 8 SEGUNDOS ANTES DO FIM
-                    if (timeLeft === 8) {
+                    // GATILHO BEEP AJUSTADO: 5 SEGUNDOS ANTES DO FIM
+                    if (timeLeft === 5) {
                         audioB.currentTime = 0;
                         audioB.play().catch(e => console.log("Beep bloqueado"));
                     }
@@ -205,10 +205,8 @@
             if (exIndex >= workoutData.length) finish(); else loadExercise(exIndex); 
         }
 
-        // SISTEMA DE RELATÓRIO AUTOMÁTICO
         function finish() {
             releaseWakeLock();
-            
             const today = new Date();
             const dateStr = today.toLocaleDateString('pt-BR');
             const minutesTotal = Math.floor(sessionTimeCounter / 60);
@@ -216,15 +214,14 @@
             const timeFormatted = `${minutesTotal}m ${secondsTotal}s`;
 
             let history = JSON.parse(localStorage.getItem('soldador_history') || "[]");
-            history.unshift({ date: dateStr, time: timeFormatted }); // Adiciona no topo
+            history.unshift({ date: dateStr, time: timeFormatted });
             localStorage.setItem('soldador_history', JSON.stringify(history));
 
-            sessionTimeCounter = 0; // Reseta para a próxima
+            sessionTimeCounter = 0;
             alert("MISSÃO CUMPRIDA! RELATÓRIO SALVO.");
             loadExercise(0);
         }
 
-        // --- UI E MODAIS ---
         document.getElementById('open-edit').onclick = () => {
             document.getElementById('cfg-time').value = settings.time;
             document.getElementById('cfg-rest').value = settings.rest;
