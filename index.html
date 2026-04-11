@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HUD do Soldador - v13.1</title>
+    <title>HUD do Soldador - v13.2</title>
     <style>
         :root {
             --bg: #0d0d0d; --panel: #1a1a1a; --accent: #ff8c00;
@@ -54,7 +54,7 @@
 <body>
 
     <div class="hud-container" id="hud">
-        <div class="version-tag">v13.1</div>
+        <div class="version-tag">v13.2</div>
         <div class="header">STATUS: <span id="status-text">STANDBY</span></div>
 
         <div class="top-menu">
@@ -105,20 +105,30 @@
         let exIndex = 0, currentSet = 1, isResting = false, timeLeft = 0, totalTime = 0, timerInterval = null, isRunning = false;
         let sessionTimeCounter = 0, wakeLock = null, isPreparing = false, audioUnlocked = false;
 
-        // MOTOR DE ÁUDIO "iOS FRIENDLY"
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         let audioCtx = null;
         let beepBuffer = null;
 
+        // FUNÇÃO PARA "ACORDAR" O ÁUDIO
         async function unlockAudio() {
-            if (audioCtx) return;
-            audioCtx = new AudioCtx();
+            if (!audioCtx) audioCtx = new AudioCtx();
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
+            
             try {
-                const resp = await fetch('beep.mp3');
-                const arrayBuf = await resp.arrayBuffer();
-                beepBuffer = await audioCtx.decodeAudioData(arrayBuf);
-            } catch (e) { console.log("Usando bipes sintéticos (beep.mp3 não encontrado)"); }
+                if (!beepBuffer) {
+                    const resp = await fetch('beep.mp3');
+                    const arrayBuf = await resp.arrayBuffer();
+                    beepBuffer = await audioCtx.decodeAudioData(arrayBuf);
+                }
+            } catch (e) { console.log("Erro ao carregar beep.mp3"); }
         }
+
+        // MONITOR DE VISIBILIDADE (O PULO DO GATO PARA SAFARI)
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && audioCtx) {
+                audioCtx.resume(); // Força o retorno do áudio quando você volta para a aba
+            }
+        });
 
         function playBeep() {
             if (!audioCtx) return;
@@ -130,7 +140,6 @@
                 source.connect(audioCtx.destination);
                 source.start(0);
             } else {
-                // BIP SINTÉTICO SE O MP3 FALHAR (PARA NÃO TRAVAR O APP)
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
                 osc.connect(gain);
@@ -181,7 +190,8 @@
         }
 
         async function toggleTimer() {
-            if (!audioUnlocked) { await unlockAudio(); audioUnlocked = true; }
+            await unlockAudio(); // Garante que o áudio está "quente" em cada clique
+            audioUnlocked = true;
 
             if (isRunning) {
                 clearInterval(timerInterval); isRunning = false; isPreparing = false;
@@ -218,6 +228,7 @@
 
         function startCombat() {
             isRunning = true;
+            isPreparing = false;
             requestWakeLock();
             if (timeLeft <= 0) timeLeft = isResting ? settings.rest : settings.time;
             totalTime = isResting ? settings.rest : settings.time;
@@ -227,7 +238,7 @@
             timerInterval = setInterval(() => {
                 timeLeft--;
                 if (!isResting) sessionTimeCounter++;
-                if (timeLeft === 6) playBeep(); // BEEP 6s ANTES
+                if (timeLeft === 6) playBeep(); 
                 updateDisplay();
                 if(timeLeft <= 0) handleEnd();
             }, 1000);
